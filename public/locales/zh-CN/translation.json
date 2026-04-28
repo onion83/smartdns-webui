@@ -147,5 +147,16 @@
     "Restart Server": "重启服务器",
     "Light Mode": "浅色模式",
     "Dark Mode": "深色模式",
-    "System": "跟随系统"
+    "System": "跟随系统",
+
+    "Main Config": "主配置文件",
+    "Geosite Config": "Geosite 配置",
+    "Geosite Data Files": "Geosite 数据文件",
+    "Select file...": "请选择文件...",
+    "Local": "本地",
+    "Remote": "远程",
+    "lines": "行",
+    "Reset": "重置",
+    "Save": "保存",
+    "Configuration saved successfully.": "配置保存成功。"
 }

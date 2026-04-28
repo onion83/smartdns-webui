@@ -134,5 +134,16 @@
   "Restart Server": "Server neu starten",
   "Light Mode": "Heller Modus",
   "Dark Mode": "Dunkler Modus",
-  "System": "System"
+  "System": "System",
+
+  "Main Config": "Hauptkonfiguration",
+  "Geosite Config": "Geosite-Konfiguration",
+  "Geosite Data Files": "Geosite-Datendateien",
+  "Select file...": "Datei ausw\u00e4hlen...",
+  "Local": "Lokal",
+  "Remote": "Remote",
+  "lines": "Zeilen",
+  "Reset": "Zur\u00fccksetzen",
+  "Save": "Speichern",
+  "Configuration saved successfully.": "Konfiguration erfolgreich gespeichert."
 }
