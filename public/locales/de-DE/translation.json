@@ -130,5 +130,9 @@
   "QPS": "QPS",
   "UI Version": "UI-Version",
   "Server Version": "Server-Version",
-  "UPTIME": "Laufzeit"
+  "UPTIME": "Laufzeit",
+  "Restart Server": "Server neu starten",
+  "Light Mode": "Heller Modus",
+  "Dark Mode": "Dunkler Modus",
+  "System": "System"
 }

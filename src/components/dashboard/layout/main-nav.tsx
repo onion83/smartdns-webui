@@ -11,9 +11,10 @@ import { MenuOutlined } from '@mui/icons-material';
 
 interface MainNavProps {
   pageTitle: string;
+  onRestarted?: () => void;
 }
 
-export function MainNav({ pageTitle }: MainNavProps): React.JSX.Element {
+export function MainNav({ pageTitle, onRestarted }: MainNavProps): React.JSX.Element {
   const [openNav, setOpenNav] = React.useState<boolean>(false);
 
   return (
@@ -47,7 +48,7 @@ export function MainNav({ pageTitle }: MainNavProps): React.JSX.Element {
               <Typography variant="h5">{pageTitle}</Typography>
             </Stack>
           </Stack>
-          <MainToolBar />
+          <MainToolBar onRestarted={onRestarted} />
         </Stack>
       </Box>
       <MobileNav

@@ -16,6 +16,7 @@ interface LayoutProps {
 
 export default function ClientLayout({ children }: LayoutProps): React.JSX.Element {
   const [pageTitle, setPageTitle] = React.useState("");
+  const [uptimeKey, setUptimeKey] = React.useState(0);
   const { t } = useTranslation();
 
   function handleActiveItem(item: NavItemConfig): void {
@@ -28,6 +29,10 @@ export default function ClientLayout({ children }: LayoutProps): React.JSX.Eleme
     }, [t, item.title]);
   }
 
+  const handleRestarted = React.useCallback((): void => {
+    setUptimeKey((k) => k + 1);
+  }, []);
+
   return (
     <Box
       sx={{
@@ -38,9 +43,9 @@ export default function ClientLayout({ children }: LayoutProps): React.JSX.Eleme
         minHeight: '100%',
       }}
     >
-      <SideNav onActiveItem={handleActiveItem} />
+      <SideNav onActiveItem={handleActiveItem} uptimeKey={uptimeKey} />
       <Box sx={{ display: 'flex', flex: '1 1 auto', flexDirection: 'column', pl: { lg: 'var(--SideNav-width)' } }}>
-        <MainNav pageTitle={pageTitle} />
+        <MainNav pageTitle={pageTitle} onRestarted={handleRestarted} />
         <Container maxWidth={false} sx={{ py: '32px' }}>
           {children}
         </Container>

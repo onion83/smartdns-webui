@@ -23,9 +23,10 @@ type OnActiveItemType = (item: NavItemConfig) => void;
 
 export interface SideNavProps {
   onActiveItem?: OnActiveItemType;
+  uptimeKey?: number;
 }
 
-export function SideNav({ onActiveItem }: SideNavProps): React.JSX.Element {
+export function SideNav({ onActiveItem, uptimeKey }: SideNavProps): React.JSX.Element {
   const pathname = usePathname();
 
   return (
@@ -66,7 +67,7 @@ export function SideNav({ onActiveItem }: SideNavProps): React.JSX.Element {
         <Typography variant="h5">SmartDNS</Typography>
       </Stack>
       <Box sx={{ px: 3, pb: 1 }}>
-        <ServerUptime />
+        <ServerUptime key={uptimeKey} />
       </Box>
       <Divider sx={{ borderColor: 'var(--mui-palette-divider)' }} />
       <Box component="nav" sx={{ flex: '1 1 auto', p: '12px' }}>

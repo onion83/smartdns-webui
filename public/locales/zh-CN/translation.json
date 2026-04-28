@@ -143,5 +143,9 @@
     
     "UI Version": "UI 版本",
     "Server Version": "服务器版本",
-    "UPTIME": "运行时间"
+    "UPTIME": "运行时间",
+    "Restart Server": "重启服务器",
+    "Light Mode": "浅色模式",
+    "Dark Mode": "深色模式",
+    "System": "跟随系统"
 }
