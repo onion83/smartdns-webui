@@ -129,5 +129,6 @@
   "Audit log is not enabled, please set `audit-enable` to `yes` in smartdns config file.": "Audit-Log is inaktiv. Setzen Sie `audit-enable` auf `yes` in der smartdns.conf-Datei.",
   "QPS": "QPS",
   "UI Version": "UI-Version",
-  "Server Version": "Server-Version"
+  "Server Version": "Server-Version",
+  "UPTIME": "Laufzeit"
 }

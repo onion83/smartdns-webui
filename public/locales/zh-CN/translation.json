@@ -142,5 +142,6 @@
     "QPS": "查询数",
     
     "UI Version": "UI 版本",
-    "Server Version": "服务器版本"
+    "Server Version": "服务器版本",
+    "UPTIME": "运行时间"
 }

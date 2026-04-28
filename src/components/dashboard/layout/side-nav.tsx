@@ -17,6 +17,7 @@ import { navItems } from './config';
 import { navIcons } from './nav-icons';
 import { useTranslation } from 'react-i18next';
 import { useUser } from '@/hooks/use-user';
+import { ServerUptime } from './server-uptime';
 
 type OnActiveItemType = (item: NavItemConfig) => void;
 
@@ -64,6 +65,9 @@ export function SideNav({ onActiveItem }: SideNavProps): React.JSX.Element {
         </Box>
         <Typography variant="h5">SmartDNS</Typography>
       </Stack>
+      <Box sx={{ px: 3, pb: 1 }}>
+        <ServerUptime />
+      </Box>
       <Divider sx={{ borderColor: 'var(--mui-palette-divider)' }} />
       <Box component="nav" sx={{ flex: '1 1 auto', p: '12px' }}>
         <RenderNavItems onActiveItem={onActiveItem} pathname={pathname} items={navItems} />
