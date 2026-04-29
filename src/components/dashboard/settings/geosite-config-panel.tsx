@@ -22,7 +22,6 @@ import { ConfigEditor } from "@/components/common/config-editor";
 import { smartdnsServer, type GeositeFileInfo } from "@/lib/backend/server";
 import { SaveOutlined, RefreshOutlined, CloudDownloadOutlined } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
-import { logger } from "@/lib/default-logger";
 
 /** Build 3-line header comment for the editor display */
 function buildFileHeader(fileInfo?: { path: string; size: number; modified: string }): string {
@@ -31,7 +30,7 @@ function buildFileHeader(fileInfo?: { path: string; size: number; modified: stri
 	// Backend returns UTC ISO 8601 (e.g. "2025-04-29T16:30:00Z"), convert to local time
 	if (fileInfo.modified.endsWith("Z")) {
 		const d = new Date(fileInfo.modified);
-		if (!isNaN(d.getTime())) {
+		if (!Number.isNaN(d.getTime())) {
 			const pad = (n: number) => String(n).padStart(2, "0");
 			localTime = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 		}
@@ -48,9 +47,9 @@ function stripFileHeader(text: string): string {
 		if (stripCount >= 3) break;
 		const trimmed = line.trim();
 		if (trimmed.startsWith("#") && (
-			trimmed.match(/^#\s*\//) ||       // # /path/...
-			trimmed.match(/^#\s*\d+\s*bytes/) || // # 12345 bytes
-			trimmed.match(/^#\s*\d{4}-/)       // # 2025-04-29 ...
+			/^#\s*\//.test(trimmed) ||       // # /path/...
+			/^#\s*\d+\s*bytes/.test(trimmed) || // # 12345 bytes
+			/^#\s*\d{4}-/.test(trimmed)       // # 2025-04-29 ...
 		)) {
 			stripCount++;
 		} else {
@@ -96,7 +95,7 @@ export function GeositeConfigPanel(): React.JSX.Element {
 		return () => {
 			cancelled = true;
 		};
-	}, []);
+	}, [t]);
 
 	// Load file content when selection changes
 	React.useEffect(() => {
@@ -158,7 +157,7 @@ export function GeositeConfigPanel(): React.JSX.Element {
 		return () => {
 			cancelled = true;
 		};
-	}, [selectedFile, files]);
+	}, [selectedFile, files, t]);
 
 	const handleFileChange = React.useCallback(
 		(event: SelectChangeEvent) => {
@@ -222,7 +221,7 @@ export function GeositeConfigPanel(): React.JSX.Element {
 		setOriginalContent(content);
 		setSaved(true);
 		setTimeout(() => setSaved(false), 3000);
-	}, [currentFile, content, isRemote]);
+	}, [currentFile, content, isRemote, t]);
 
 	const handleReset = React.useCallback(() => {
 		setContent(originalContent);

@@ -7,7 +7,6 @@ import { ConfigEditor } from "@/components/common/config-editor";
 import { smartdnsServer } from "@/lib/backend/server";
 import { SaveOutlined, RefreshOutlined } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
-import { logger } from "@/lib/default-logger";
 
 export function MainConfigPanel(): React.JSX.Element {
 	const { t } = useTranslation();
@@ -43,7 +42,7 @@ export function MainConfigPanel(): React.JSX.Element {
 		return () => {
 			cancelled = true;
 		};
-	}, []);
+	}, [t]);
 
 	const handleSave = React.useCallback(async () => {
 		setSaving(true);
@@ -58,7 +57,7 @@ export function MainConfigPanel(): React.JSX.Element {
 		setOriginalContent(configContent);
 		setSaved(true);
 		setTimeout(() => setSaved(false), 3000);
-	}, []);
+	}, [t]);
 
 	const handleReset = React.useCallback(() => {
 		setContent(originalContent);
