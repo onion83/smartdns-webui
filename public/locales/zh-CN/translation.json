@@ -156,7 +156,12 @@
     "Local": "本地",
     "Remote": "远程",
     "lines": "行",
+    "Update": "更新",
     "Reset": "重置",
     "Save": "保存",
-    "Configuration saved successfully.": "配置保存成功。"
+    "Configuration saved successfully.": "配置保存成功。",
+    "Remote file - no cached data, click Update to download": "远程文件 - 暂无缓存数据，请点击「更新」下载",
+    "Failed to download geosite files": "下载 Geosite 数据文件失败",
+    "Update completed successfully.": "更新完成。",
+    "Failed to load file content": "读取文件内容失败"
 }

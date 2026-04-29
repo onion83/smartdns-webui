@@ -264,6 +264,37 @@ export interface WhoIS {
     registrar: string;
 }
 
+export interface ConfigFileData {
+    path: string;
+    content: string;
+}
+
+export interface GeositeFileInfo {
+    name: string;
+    path: string;
+    source: "local" | "remote";
+    url?: string;
+    cache_path?: string;
+}
+
+export interface GeositeFileContent {
+    path: string;
+    content: string;
+    file_info?: {
+        path: string;
+        size: number;
+        modified: string;
+    };
+}
+
+export interface GeositeListResponse {
+    geosite_files: GeositeFileInfo[];
+}
+
+export interface GeositeDownloadResponse {
+    message: string;
+}
+
 export interface UpStreamServers {
     host: string;
     ip: string;
@@ -592,6 +623,50 @@ class SmartDNSAPI {
 
     async CheckLoginStatus(): Promise<{ error?: ServerError }> {
         return this.server.fetch<null>('/api/auth/check', 'GET', {}, {});
+    }
+
+    async GetConfigFile(path: string): Promise<{ error?: ServerError, data?: ConfigFileData | null }> {
+        const ret = await this.server.fetch<ConfigFileData>(`/api/config/file?path=${encodeURIComponent(path)}`, 'GET', {}, {});
+        return ret;
+    }
+
+    async SaveConfigFile(path: string, content: string): Promise<{ error?: ServerError }> {
+        return this.server.fetch<null>(`/api/config/file?path=${encodeURIComponent(path)}`, 'PUT', {}, { content });
+    }
+
+    async GetGeositeList(): Promise<{ error?: ServerError, data?: GeositeFileInfo[] | null }> {
+        const ret = await this.server.fetch<GeositeListResponse>('/api/config/geosite/list', 'GET', {}, {});
+        if (ret.error) {
+            return { error: ret.error };
+        }
+
+        if (!ret.data) {
+            return { error: 'No data' };
+        }
+
+        return { data: ret.data.geosite_files };
+    }
+
+    async GetGeositeFile(path: string, cachePath?: string): Promise<{ error?: ServerError, data?: GeositeFileContent | null }> {
+        const params = new URLSearchParams({ path });
+        if (cachePath) {
+            params.set('cache_path', cachePath);
+        }
+        const ret = await this.server.fetch<GeositeFileContent>(`/api/config/geosite/file?${params.toString()}`, 'GET', {}, {});
+        return ret;
+    }
+
+    async SaveGeositeFile(path: string, content: string, cachePath?: string): Promise<{ error?: ServerError }> {
+        const params = new URLSearchParams({ path });
+        if (cachePath) {
+            params.set('cache_path', cachePath);
+        }
+        return this.server.fetch<null>(`/api/config/geosite/file?${params.toString()}`, 'PUT', {}, { content });
+    }
+
+    async DownloadGeositeFiles(): Promise<{ error?: ServerError, data?: GeositeDownloadResponse | null }> {
+        const ret = await this.server.fetch<GeositeDownloadResponse>('/api/config/geosite/download', 'POST', {}, {});
+        return ret;
     }
 }
 

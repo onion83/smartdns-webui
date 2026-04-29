@@ -15,6 +15,7 @@ export interface ConfigEditorProps {
 	onChange?: (value: string) => void;
 	readOnly?: boolean;
 	minHeight?: number | string;
+	maxHeight?: number | string;
 	language?: "smartdns" | "plaintext";
 }
 
@@ -23,6 +24,7 @@ export function ConfigEditor({
 	onChange,
 	readOnly = false,
 	minHeight = 400,
+	maxHeight,
 	language = "smartdns",
 }: ConfigEditorProps): React.JSX.Element {
 	const { colorScheme } = useColorScheme();
@@ -39,12 +41,16 @@ export function ConfigEditor({
 				"&": {
 					backgroundColor: isDark ? "#1e1e1e" : "#ffffff",
 				},
+				".cm-scroller": {
+					overflow: "auto",
+				},
 			}),
 		);
 		return exts;
 	}, [language, isDark]);
 
 	const minHeightPx = typeof minHeight === "number" ? `${minHeight}px` : minHeight;
+	const maxHeightPx = maxHeight ? (typeof maxHeight === "number" ? `${maxHeight}px` : maxHeight) : undefined;
 
 	return (
 		<NoSsr fallback={<Box sx={{ minHeight, bgcolor: "grey.100", borderRadius: 1 }} />}>
@@ -55,12 +61,12 @@ export function ConfigEditor({
 				readOnly={readOnly}
 				theme={isDark ? vscodeDark : vscodeLight}
 				extensions={extensions}
-				height="auto"
+				height={maxHeightPx ?? "auto"}
 				minHeight={minHeightPx}
 				style={{
 					fontSize: "13px",
 					borderRadius: "8px",
-					overflow: "hidden",
+					overflow: maxHeight ? "hidden" : undefined,
 					border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`,
 				}}
 				basicSetup={{
