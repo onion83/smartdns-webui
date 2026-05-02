@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Stack from "@mui/material/Stack";
+import { useMemo } from "react";
 import { Alert, Button, Card, CardActions, CardContent, Chip, CircularProgress, Divider, Typography } from "@mui/material";
 import { ConfigEditor } from "@/components/common/config-editor";
 import { smartdnsServer, type ConfigFileData, type ServerError } from "@/lib/backend/server";
@@ -19,68 +20,160 @@ const queryClient = new QueryClient({
 	},
 });
 
-const CONFIG_QUERY_KEY = ["config", "smartdns.conf"];
-
 function MainConfigPanelInner(): React.JSX.Element {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
-	const { data, isLoading, error: queryError } = useQuery({
-		queryKey: CONFIG_QUERY_KEY,
-		queryFn: () => smartdnsServer.GetConfigFile("smartdns.conf"),
+
+	// Fetch the list of config files
+	const {
+		data: confFilesData,
+		isLoading: isLoadingFiles,
+		error: filesError,
+	} = useQuery({
+		queryKey: ["config", "conf-files"],
+		queryFn: () => smartdnsServer.GetConfFiles(),
 	});
 
-	const serverContent = data?.data?.content ?? "";
+	const confFiles = useMemo(() => confFilesData?.data ?? [], [confFilesData?.data]);
+
+	// Currently selected file (default to first / main)
+	const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
+
+	// Sync selectedPath when files load
+	React.useEffect(() => {
+		if (confFiles.length > 0 && (selectedPath === null || !confFiles.some((f) => f.path === selectedPath))) {
+			setSelectedPath(confFiles[0].path);
+		}
+	}, [confFiles, selectedPath]);
+
+	// Fetch content of the selected file
+	const {
+		data: fileData,
+		isLoading: isLoadingContent,
+		error: contentError,
+	} = useQuery({
+		queryKey: ["config", "file", selectedPath],
+		queryFn: () => smartdnsServer.GetConfigFile(selectedPath!),
+		enabled: !!selectedPath,
+	});
+
+	const serverContent = fileData?.data?.content ?? "";
 	const [content, setContent] = React.useState("");
+	const [contentPath, setContentPath] = React.useState<string | null>(null);
 	const [saving, setSaving] = React.useState(false);
 	const [saved, setSaved] = React.useState(false);
 	const [saveError, setSaveError] = React.useState("");
+	const [validating, setValidating] = React.useState(false);
 
+	// Track the last saved/loaded content for dirty check (avoid React Query timing issues)
+	const savedContentRef = React.useRef("");
+
+	// When new file content arrives (and loading is done), update editor and track which file it belongs to
+	// Guard with !isLoadingContent to prevent stale content from being applied during file switch
 	React.useEffect(() => {
-		if (serverContent) {
+		if (!isLoadingContent && serverContent && selectedPath) {
 			setContent(serverContent);
+			setContentPath(selectedPath);
+			savedContentRef.current = serverContent;
+			if (contentPath !== selectedPath) {
+				setSaved(false);
+			}
+			setSaveError("");
 		}
-	}, [serverContent]);
+	}, [serverContent, selectedPath, isLoadingContent]);
 
-	const isModified = content !== serverContent;
+	// Only consider modified when content differs from last saved/loaded content
+	const isModified = contentPath === selectedPath && content !== savedContentRef.current;
 
 	const handleSave = React.useCallback(async () => {
+		if (!selectedPath) return;
 		setSaving(true);
 		setSaveError("");
-		const { error } = await smartdnsServer.SaveConfigFile("smartdns.conf", content);
-		setSaving(false);
+		const { error } = await smartdnsServer.SaveConfigFile(selectedPath, content);
 		if (error) {
+			setSaving(false);
 			setSaveError(error?.toString() ?? t("Failed to save configuration"));
 			return;
 		}
-		// Update the query cache so serverContent matches current content
-		queryClient.setQueryData<{ error?: ServerError; data?: ConfigFileData | null }>(CONFIG_QUERY_KEY, (old) => {
-			if (!old?.data) return old;
-			return { ...old, data: { ...old.data, content } };
-		});
+		// Validate config after save
+		setValidating(true);
+		const validateResult = await smartdnsServer.ValidateConfig();
+		setValidating(false);
+		if (validateResult.error) {
+			setSaving(false);
+			setSaveError(validateResult.error?.toString() ?? t("Configuration validation failed"));
+			return;
+		}
+		if (!validateResult.data?.valid) {
+			setSaving(false);
+			setSaveError(validateResult.data?.message ?? t("Configuration validation failed"));
+			return;
+		}
+		savedContentRef.current = content;
+		queryClient.setQueryData<{ error?: ServerError; data?: ConfigFileData | null }>(
+			["config", "file", selectedPath],
+			(old) => {
+				if (!old?.data) return old;
+				return { ...old, data: { ...old.data, content } };
+			},
+		);
+		setSaving(false);
 		setSaved(true);
 		setTimeout(() => setSaved(false), 3000);
-	}, [content, queryClient, t]);
+	}, [content, selectedPath, queryClient, t]);
 
 	const handleReset = React.useCallback(() => {
 		setContent(serverContent);
+		savedContentRef.current = serverContent;
 		setSaved(false);
 		setSaveError("");
 	}, [serverContent]);
 
+	const handleSelectFile = React.useCallback(
+		(path: string) => {
+			if (isModified) {
+				const confirm = window.confirm(t("You have unsaved changes. Discard and switch file?"));
+				if (!confirm) return;
+			}
+			setSelectedPath(path);
+		},
+		[isModified, t],
+	);
+
+	const selectedFile = confFiles.find((f) => f.path === selectedPath);
+
 	return (
 		<Card>
 			<CardContent>
-				<Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
-					<Chip label="smartdns.conf" size="small" variant="outlined" color="primary" />
-					<Chip label={t("Main Config")} size="small" color="info" />
-					{!isLoading && content && (
+				<Stack spacing={1} direction="row" alignItems="center" sx={{ mb: 1, flexWrap: "wrap", gap: 1 }}>
+					{isLoadingFiles ? (
+						<CircularProgress size={20} />
+					) : (
+						confFiles.map((file) => (
+							<Chip
+								key={file.path}
+								label={file.name}
+								size="small"
+								color={file.type === "main" ? "primary" : "success"}
+								variant={file.path === selectedPath ? "filled" : "outlined"}
+								onClick={() => handleSelectFile(file.path)}
+								sx={{ cursor: "pointer" }}
+							/>
+						))
+					)}
+					{!isLoadingContent && content && (
 						<Typography variant="body2" color="text.secondary" sx={{ ml: "auto" }}>
 							{content.split("\n").length} {t("lines")}
 						</Typography>
 					)}
 				</Stack>
+				{selectedFile && (
+					<Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+						{selectedFile.type === "main" ? t("Main Config") : t("Sub Config")} — {selectedFile.path}
+					</Typography>
+				)}
 				<Divider sx={{ mb: 2 }} />
-				{isLoading ? (
+				{isLoadingContent ? (
 					<Stack sx={{ height: 400, alignItems: "center", justifyContent: "center" }}>
 						<CircularProgress size={32} />
 					</Stack>
@@ -88,9 +181,9 @@ function MainConfigPanelInner(): React.JSX.Element {
 					<ConfigEditor content={content} onChange={setContent} />
 				) : null}
 			</CardContent>
-			{(saveError || queryError) && (
+			{(saveError || filesError || contentError) && (
 				<Alert severity="error" sx={{ mx: 2 }}>
-					{saveError || queryError?.message}
+					{saveError || filesError?.message || contentError?.message}
 				</Alert>
 			)}
 			{saved && (
@@ -100,11 +193,16 @@ function MainConfigPanelInner(): React.JSX.Element {
 			)}
 			<Divider />
 			<CardActions sx={{ justifyContent: "flex-end", px: 2 }}>
-				<Button startIcon={<RefreshOutlined />} onClick={handleReset} disabled={isLoading || !isModified}>
+				<Button startIcon={<RefreshOutlined />} onClick={handleReset} disabled={isLoadingContent || !isModified}>
 					{t("Reset")}
 				</Button>
-				<Button startIcon={<SaveOutlined />} variant="contained" onClick={handleSave} disabled={isLoading || saving || !isModified}>
-					{t("Save")}
+				<Button
+					startIcon={validating ? <CircularProgress size={16} /> : <SaveOutlined />}
+					variant="contained"
+					onClick={handleSave}
+					disabled={isLoadingContent || saving || validating || !isModified}
+				>
+					{validating ? t("Validating...") : t("Save")}
 				</Button>
 			</CardActions>
 		</Card>

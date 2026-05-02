@@ -268,6 +268,21 @@ export interface ConfigFileData {
     content: string;
 }
 
+export interface ConfigValidateResult {
+    valid: boolean;
+    message: string;
+}
+
+export interface ConfFileInfo {
+    name: string;
+    path: string;
+    type: "main" | "sub";
+}
+
+export interface ConfFilesResponse {
+    conf_files: ConfFileInfo[];
+}
+
 export interface GeositeFileInfo {
     name: string;
     path: string;
@@ -626,6 +641,14 @@ class SmartDNSAPI {
         return this.server.fetch<null>('/api/auth/check', 'GET', {}, {});
     }
 
+    async GetConfFiles(): Promise<{ error?: ServerError, data?: ConfFileInfo[] | null }> {
+        const ret = await this.server.fetch<ConfFilesResponse>('/api/config/conf-files', 'GET', {}, {});
+        if (ret.error) {
+            return { error: ret.error };
+        }
+        return { data: ret.data?.conf_files ?? [] };
+    }
+
     async GetConfigFile(path: string): Promise<{ error?: ServerError, data?: ConfigFileData | null }> {
         const ret = await this.server.fetch<ConfigFileData>(`/api/config/file?path=${encodeURIComponent(path)}`, 'GET', {}, {});
         return ret;
@@ -633,6 +656,10 @@ class SmartDNSAPI {
 
     async SaveConfigFile(path: string, content: string): Promise<{ error?: ServerError }> {
         return this.server.fetch<null>(`/api/config/file?path=${encodeURIComponent(path)}`, 'PUT', {}, { content });
+    }
+
+    async ValidateConfig(): Promise<{ error?: ServerError, data?: ConfigValidateResult | null }> {
+        return this.server.fetch<ConfigValidateResult>('/api/config/validate', 'POST', {}, {});
     }
 
     async GetGeositeList(): Promise<{ error?: ServerError, data?: GeositeFileInfo[] | null }> {

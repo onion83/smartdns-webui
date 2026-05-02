@@ -150,6 +150,10 @@
     "System": "跟随系统",
 
     "Main Config": "主配置文件",
+    "Sub Config": "子配置文件",
+    "You have unsaved changes. Discard and switch file?": "有未保存的更改，是否放弃并切换文件？",
+    "Failed to save configuration": "保存配置失败",
+    "Configuration validation failed": "配置校验失败",
     "Geosite Config": "Geosite 配置",
     "Geosite Data Files": "Geosite 数据文件",
     "Select file...": "请选择文件...",
@@ -160,6 +164,7 @@
     "Reset": "重置",
     "Save": "保存",
     "Configuration saved successfully.": "配置保存成功。",
+    "Validating...": "校验中...",
     "Remote file - no cached data, click Update to download": "远程文件 - 暂无缓存数据，请点击「更新」下载",
     "Failed to download geosite files": "下载 Geosite 数据文件失败",
     "Update completed successfully.": "更新完成。",
