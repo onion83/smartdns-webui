@@ -42,7 +42,7 @@ class DataServer {
         }
     }
 
-    async fetch<T>(path: string, method: string, headers: HeadersInit, bodyData: any, noSignOut = false): Promise<FetchResponse<T>> {
+    async fetch<T>(path: string, method: string, headers: HeadersInit, bodyData: unknown, noSignOut = false): Promise<FetchResponse<T>> {
         try {
             let response;
             if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {

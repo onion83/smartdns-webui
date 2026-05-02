@@ -19,7 +19,7 @@ import {
 	Typography,
 } from "@mui/material";
 import { ConfigEditor } from "@/components/common/config-editor";
-import { smartdnsServer, type GeositeFileInfo } from "@/lib/backend/server";
+import { smartdnsServer, type GeositeFileInfo, type GeositeFileContent, type ServerError } from "@/lib/backend/server";
 import { SaveOutlined, RefreshOutlined, CloudDownloadOutlined } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -107,11 +107,12 @@ function GeositeConfigPanelInner(): React.JSX.Element {
 
 	// Sync content from query result
 	const rawServerContent = fileData?.data ? buildFileHeader(fileData.data.file_info) + fileData.data.content : "";
-	const prevRawRef = React.useRef(rawServerContent);
-	if (rawServerContent && rawServerContent !== prevRawRef.current) {
-		prevRawRef.current = rawServerContent;
-		setContent(rawServerContent);
-	}
+
+	React.useEffect(() => {
+		if (rawServerContent) {
+			setContent(rawServerContent);
+		}
+	}, [rawServerContent]);
 
 	// For remote files without cache, show placeholder
 	React.useEffect(() => {
@@ -169,10 +170,10 @@ function GeositeConfigPanelInner(): React.JSX.Element {
 		}
 		smartdnsServer.FlushCache();
 		// Update query cache
-		queryClient.setQueryData(geositeFileKey(currentFile.name), (old: any) => ({
-			...old,
-			data: { ...old?.data, content: rawContent },
-		}));
+		queryClient.setQueryData<{ error?: ServerError; data?: GeositeFileContent | null }>(geositeFileKey(currentFile.name), (old) => {
+			if (!old?.data) return old;
+			return { ...old, data: { ...old.data, content: rawContent } };
+		});
 		setSaved(true);
 		setTimeout(() => setSaved(false), 3000);
 	}, [currentFile, content, queryClient, t]);

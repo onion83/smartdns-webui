@@ -4,7 +4,7 @@ import * as React from "react";
 import Stack from "@mui/material/Stack";
 import { Alert, Button, Card, CardActions, CardContent, Chip, CircularProgress, Divider, Typography } from "@mui/material";
 import { ConfigEditor } from "@/components/common/config-editor";
-import { smartdnsServer } from "@/lib/backend/server";
+import { smartdnsServer, type ConfigFileData, type ServerError } from "@/lib/backend/server";
 import { SaveOutlined, RefreshOutlined } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -30,17 +30,16 @@ function MainConfigPanelInner(): React.JSX.Element {
 	});
 
 	const serverContent = data?.data?.content ?? "";
-	const [content, setContent] = React.useState(serverContent);
+	const [content, setContent] = React.useState("");
 	const [saving, setSaving] = React.useState(false);
 	const [saved, setSaved] = React.useState(false);
 	const [saveError, setSaveError] = React.useState("");
 
-	// Sync content when query data arrives
-	const prevServerContentRef = React.useRef(serverContent);
-	if (serverContent && serverContent !== prevServerContentRef.current) {
-		prevServerContentRef.current = serverContent;
-		setContent(serverContent);
-	}
+	React.useEffect(() => {
+		if (serverContent) {
+			setContent(serverContent);
+		}
+	}, [serverContent]);
 
 	const isModified = content !== serverContent;
 
@@ -54,10 +53,10 @@ function MainConfigPanelInner(): React.JSX.Element {
 			return;
 		}
 		// Update the query cache so serverContent matches current content
-		queryClient.setQueryData(CONFIG_QUERY_KEY, (old: any) => ({
-			...old,
-			data: { ...old?.data, content },
-		}));
+		queryClient.setQueryData<{ error?: ServerError; data?: ConfigFileData | null }>(CONFIG_QUERY_KEY, (old) => {
+			if (!old?.data) return old;
+			return { ...old, data: { ...old.data, content } };
+		});
 		setSaved(true);
 		setTimeout(() => setSaved(false), 3000);
 	}, [content, queryClient, t]);
