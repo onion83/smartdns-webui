@@ -16,32 +16,24 @@ const tabs = [
 	{
 		label: "Password",
 		icon: undefined,
-		panel: <UpdatePasswordForm />,
 	},
 	{
 		label: "Language",
 		icon: undefined,
-		panel: <ChangeLang />,
 	},
 	{
 		label: "Main Config",
 		icon: <DescriptionOutlined fontSize="small" sx={{ mr: 0.5 }} />,
-		panel: <MainConfigPanel />,
 	},
 	{
 		label: "Geosite Config",
 		icon: <PublicOutlined fontSize="small" sx={{ mr: 0.5 }} />,
-		panel: <GeositeConfigPanel />,
 	},
 ];
 
 export default function SettingsTab(): React.JSX.Element {
 	const { t } = useTranslation();
 	const [value, setValue] = React.useState("0");
-
-	const handleChange = (event: React.SyntheticEvent, newValue: string): void => {
-		setValue(newValue);
-	};
 
 	return (
 		<Stack spacing={1}>
@@ -51,7 +43,7 @@ export default function SettingsTab(): React.JSX.Element {
 						<CardContent>
 							<Box sx={{ borderBottom: 1, borderColor: "divider" }}>
 								<TabList
-									onChange={handleChange}
+									onChange={(_event, newValue) => setValue(newValue)}
 									variant="scrollable"
 									scrollButtons="auto"
 								>
@@ -71,9 +63,10 @@ export default function SettingsTab(): React.JSX.Element {
 									})}
 								</TabList>
 							</Box>
-							{tabs.map((tab, index) => {
-								return <TabPanel key={tab.label} value={index.toString()}>{tab.panel}</TabPanel>;
-							})}
+							<TabPanel value="0"><UpdatePasswordForm /></TabPanel>
+							<TabPanel value="1"><ChangeLang /></TabPanel>
+							<TabPanel value="2"><MainConfigPanel /></TabPanel>
+							<TabPanel value="3"><GeositeConfigPanel /></TabPanel>
 						</CardContent>
 					</TabContext>
 				</Typography>

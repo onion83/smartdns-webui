@@ -5,6 +5,7 @@ const devConfig = {
             {
                 source: '/api/:path*',
                 destination: 'http://127.0.0.1:6080/api/:path*'
+                //destination: 'http://192.168.11.199:6080/api/:path*'
             }
         ];
     }

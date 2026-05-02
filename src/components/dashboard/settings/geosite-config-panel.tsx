@@ -22,12 +22,25 @@ import { ConfigEditor } from "@/components/common/config-editor";
 import { smartdnsServer, type GeositeFileInfo } from "@/lib/backend/server";
 import { SaveOutlined, RefreshOutlined, CloudDownloadOutlined } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
+import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			refetchOnWindowFocus: false,
+			gcTime: 0,
+			retry: false,
+		},
+	},
+});
+
+const GEOSITE_LIST_KEY = ["geosite", "list"];
+const geositeFileKey = (tag: string) => ["geosite", "file", tag];
 
 /** Build 3-line header comment for the editor display */
 function buildFileHeader(fileInfo?: { path: string; size: number; modified: string }): string {
 	if (!fileInfo) return "";
 	let localTime = fileInfo.modified;
-	// Backend returns UTC ISO 8601 (e.g. "2025-04-29T16:30:00Z"), convert to local time
 	if (fileInfo.modified.endsWith("Z")) {
 		const d = new Date(fileInfo.modified);
 		if (!Number.isNaN(d.getTime())) {
@@ -41,16 +54,14 @@ function buildFileHeader(fileInfo?: { path: string; size: number; modified: stri
 /** Strip the 3-line header (lines starting with # containing metadata) from editor content */
 function stripFileHeader(text: string): string {
 	const lines = text.split("\n");
-	// Strip up to 3 leading comment lines that match the header pattern
 	let stripCount = 0;
 	for (const line of lines) {
 		if (stripCount >= 3) break;
 		const trimmed = line.trim();
-		if (trimmed.startsWith("#") && (
-			/^#\s*\//.test(trimmed) ||       // # /path/...
-			/^#\s*\d+\s*bytes/.test(trimmed) || // # 12345 bytes
-			/^#\s*\d{4}-/.test(trimmed)       // # 2025-04-29 ...
-		)) {
+		if (
+			trimmed.startsWith("#") &&
+			(/^#\s*\//.test(trimmed) || /^#\s*\d+\s*bytes/.test(trimmed) || /^#\s*\d{4}-/.test(trimmed))
+		) {
 			stripCount++;
 		} else {
 			break;
@@ -59,110 +70,63 @@ function stripFileHeader(text: string): string {
 	return stripCount > 0 ? lines.slice(stripCount).join("\n") : text;
 }
 
-export function GeositeConfigPanel(): React.JSX.Element {
+function GeositeConfigPanelInner(): React.JSX.Element {
 	const { t } = useTranslation();
-	const [files, setFiles] = React.useState<GeositeFileInfo[]>([]);
-	const [selectedFile, setSelectedFile] = React.useState<string>("");
-	const [content, setContent] = React.useState<string>("");
-	const [originalContent, setOriginalContent] = React.useState<string>("");
+	const queryClient = useQueryClient();
+
+	const {
+		data: listData,
+		isLoading: listLoading,
+		error: listError,
+	} = useQuery({
+		queryKey: GEOSITE_LIST_KEY,
+		queryFn: () => smartdnsServer.GetGeositeList(),
+	});
+
+	const files = listData?.data ?? [];
+
+	const [selectedFile, setSelectedFile] = React.useState("");
+	const [content, setContent] = React.useState("");
+	const [saving, setSaving] = React.useState(false);
 	const [saved, setSaved] = React.useState(false);
 	const [error, setError] = React.useState("");
-	const [loading, setLoading] = React.useState(true);
-	const [fileLoading, setFileLoading] = React.useState(false);
-	const [saving, setSaving] = React.useState(false);
 	const [downloading, setDownloading] = React.useState(false);
 	const [updateMsg, setUpdateMsg] = React.useState("");
 
-	// Load geosite file list
+	// Query for file content
+	const currentFile = files.find((f) => f.name === selectedFile);
+
+	const {
+		data: fileData,
+		isLoading: fileLoading,
+	} = useQuery({
+		queryKey: geositeFileKey(selectedFile),
+		queryFn: () => smartdnsServer.GetGeositeFile(selectedFile),
+		enabled: !!selectedFile && currentFile?.source !== "remote" || (!!selectedFile && !!(currentFile as GeositeFileInfo | undefined)?.cache_path),
+	});
+
+	// Sync content from query result
+	const rawServerContent = fileData?.data ? buildFileHeader(fileData.data.file_info) + fileData.data.content : "";
+	const prevRawRef = React.useRef(rawServerContent);
+	if (rawServerContent && rawServerContent !== prevRawRef.current) {
+		prevRawRef.current = rawServerContent;
+		setContent(rawServerContent);
+	}
+
+	// For remote files without cache, show placeholder
 	React.useEffect(() => {
-		let cancelled = false;
-		const loadList = async () => {
-			setLoading(true);
-			setError("");
-			const { error, data } = await smartdnsServer.GetGeositeList();
-			if (cancelled) return;
-			if (error || !data || data.length === 0) {
-				if (error) {
-					setError(error?.toString() ?? t("Failed to load geosite file list"));
-				}
-				setLoading(false);
-				return;
-			}
-			setFiles(data);
-			setLoading(false);
-		};
-		loadList();
-		return () => {
-			cancelled = true;
-		};
-	}, [t]);
-
-	// Load file content when selection changes
-	React.useEffect(() => {
-		if (!selectedFile) return;
-
-		const currentFile = files.find((f) => f.name === selectedFile);
-		if (!currentFile) return;
-
-		// For remote files with cache_path, read the cached local file
-		if (currentFile.source === "remote") {
-			if (!currentFile.cache_path) {
-				setContent(`# ${currentFile.name}\n# ${t("Remote file - no cached data, click Update to download")}\n# URL: ${currentFile.path}\n`);
-				setOriginalContent("");
-				return;
-			}
-
-			let cancelled = false;
-			const loadFile = async () => {
-				setFileLoading(true);
-				setError("");
-				const { error, data } = await smartdnsServer.GetGeositeFile(currentFile.path, currentFile.cache_path);
-				if (cancelled) return;
-				setFileLoading(false);
-				if (error || !data) {
-					setContent(`# ${currentFile.name}\n# ${t("Remote file - no cached data, click Update to download")}\n# URL: ${currentFile.path}\n`);
-					setOriginalContent("");
-					return;
-				}
-				const header = buildFileHeader(data.file_info);
-				const displayContent = header + data.content;
-				setContent(displayContent);
-				setOriginalContent(displayContent);
-			};
-			loadFile();
-			return () => {
-				cancelled = true;
-			};
+		if (!selectedFile || !currentFile) return;
+		if (currentFile.source === "remote" && !currentFile.cache_path) {
+			setContent(`# ${currentFile.name}\n# ${t("Remote file - no cached data, click Update to download")}\n# URL: ${currentFile.path}\n`);
 		}
+	}, [selectedFile, currentFile, t]);
 
-		// Local file
-		let cancelled = false;
-		const loadFile = async () => {
-			setFileLoading(true);
-			setError("");
-			const { error, data } = await smartdnsServer.GetGeositeFile(currentFile.path);
-			if (cancelled) return;
-			setFileLoading(false);
-			if (error || !data) {
-				setContent(`# ${currentFile.name}\n# ${t("Failed to load file content")}\n`);
-				setOriginalContent("");
-				return;
-			}
-			const header = buildFileHeader(data.file_info);
-			const displayContent = header + data.content;
-			setContent(displayContent);
-			setOriginalContent(displayContent);
-		};
-		loadFile();
-		return () => {
-			cancelled = true;
-		};
-	}, [selectedFile, files, t]);
+	const isRemote = currentFile?.source === "remote";
+	const isModified = content !== rawServerContent && rawServerContent !== "";
 
 	const handleFileChange = React.useCallback(
 		(event: SelectChangeEvent) => {
-			const name = event.target.value;
-			setSelectedFile(name);
+			setSelectedFile(event.target.value);
 			setSaved(false);
 			setError("");
 			setUpdateMsg("");
@@ -170,19 +134,14 @@ export function GeositeConfigPanel(): React.JSX.Element {
 		[],
 	);
 
-	const currentFile = files.find((f) => f.name === selectedFile);
-	const isRemote = currentFile?.source === "remote";
-	const isModified = content !== originalContent && originalContent !== "";
-
 	const handleReloadFile = React.useCallback(async () => {
 		if (!currentFile) return;
 		setDownloading(true);
 		setError("");
 		setUpdateMsg("");
 
-		// For remote files, trigger download first, then read the cache
 		if (isRemote) {
-			const { error: dlErr } = await smartdnsServer.DownloadGeositeFiles();
+			const { error: dlErr } = await smartdnsServer.DownloadGeositeFile(currentFile.name);
 			if (dlErr) {
 				setDownloading(false);
 				setUpdateMsg(dlErr?.toString() ?? t("Failed to download geosite files"));
@@ -190,44 +149,39 @@ export function GeositeConfigPanel(): React.JSX.Element {
 			}
 		}
 
-		// Read the file content into the editor
-		const cachePath = isRemote ? currentFile.cache_path : undefined;
-		const { error, data } = await smartdnsServer.GetGeositeFile(currentFile.path, cachePath);
+		// Invalidate query to refetch file content
+		await queryClient.invalidateQueries({ queryKey: geositeFileKey(currentFile.name) });
 		setDownloading(false);
-		if (error || !data) {
-			setUpdateMsg(error?.toString() ?? t("Failed to load file content"));
-			return;
-		}
-		const header = buildFileHeader(data.file_info);
-		const displayContent = header + data.content;
-		setContent(displayContent);
-		setOriginalContent(displayContent);
 		setUpdateMsg(t("Update completed successfully."));
 		setTimeout(() => setUpdateMsg(""), 5000);
-	}, [currentFile, isRemote, t]);
+	}, [currentFile, isRemote, queryClient, t]);
 
 	const handleSave = React.useCallback(async () => {
 		if (!currentFile) return;
 		setSaving(true);
 		setError("");
-		const cachePath = isRemote ? currentFile.cache_path : undefined;
 		const rawContent = stripFileHeader(content);
-		const { error } = await smartdnsServer.SaveGeositeFile(currentFile.path, rawContent, cachePath);
+		const { error } = await smartdnsServer.SaveGeositeFile(currentFile.name, rawContent);
 		setSaving(false);
 		if (error) {
 			setError(error?.toString() ?? t("Failed to save file"));
 			return;
 		}
-		setOriginalContent(content);
+		smartdnsServer.FlushCache();
+		// Update query cache
+		queryClient.setQueryData(geositeFileKey(currentFile.name), (old: any) => ({
+			...old,
+			data: { ...old?.data, content: rawContent },
+		}));
 		setSaved(true);
 		setTimeout(() => setSaved(false), 3000);
-	}, [currentFile, content, isRemote, t]);
+	}, [currentFile, content, queryClient, t]);
 
 	const handleReset = React.useCallback(() => {
-		setContent(originalContent);
+		setContent(rawServerContent);
 		setSaved(false);
 		setError("");
-	}, [originalContent]);
+	}, [rawServerContent]);
 
 	return (
 		<Card>
@@ -236,7 +190,7 @@ export function GeositeConfigPanel(): React.JSX.Element {
 					<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
 						{t("Geosite Data Files")}
 					</Typography>
-					{loading ? (
+					{listLoading ? (
 						<Stack sx={{ alignItems: "center", py: 4 }}>
 							<CircularProgress size={32} />
 						</Stack>
@@ -298,13 +252,13 @@ export function GeositeConfigPanel(): React.JSX.Element {
 					<Stack sx={{ height: 300, alignItems: "center", justifyContent: "center" }}>
 						<CircularProgress size={32} />
 					</Stack>
-				) : (
-					content && <ConfigEditor content={content} onChange={setContent} readOnly={false} maxHeight={500} />
-				)}
+				) : content ? (
+					<ConfigEditor content={content} onChange={setContent} readOnly={false} maxHeight={500} />
+				) : null}
 			</CardContent>
-			{error && (
+			{(error || listError) && (
 				<Alert severity="error" sx={{ mx: 2 }}>
-					{error}
+					{error || listError?.message}
 				</Alert>
 			)}
 			{updateMsg && (
@@ -332,5 +286,13 @@ export function GeositeConfigPanel(): React.JSX.Element {
 				</Button>
 			</CardActions>
 		</Card>
+	);
+}
+
+export function GeositeConfigPanel(): React.JSX.Element {
+	return (
+		<QueryClientProvider client={queryClient}>
+			<GeositeConfigPanelInner />
+		</QueryClientProvider>
 	);
 }

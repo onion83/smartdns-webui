@@ -7,65 +7,66 @@ import { ConfigEditor } from "@/components/common/config-editor";
 import { smartdnsServer } from "@/lib/backend/server";
 import { SaveOutlined, RefreshOutlined } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
+import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-export function MainConfigPanel(): React.JSX.Element {
+const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			refetchOnWindowFocus: false,
+			gcTime: 0,
+			retry: false,
+		},
+	},
+});
+
+const CONFIG_QUERY_KEY = ["config", "smartdns.conf"];
+
+function MainConfigPanelInner(): React.JSX.Element {
 	const { t } = useTranslation();
-	const [content, setContent] = React.useState("");
-	const [originalContent, setOriginalContent] = React.useState("");
-	const [saved, setSaved] = React.useState(false);
-	const [error, setError] = React.useState("");
-	const [loading, setLoading] = React.useState(true);
+	const queryClient = useQueryClient();
+	const { data, isLoading, error: queryError } = useQuery({
+		queryKey: CONFIG_QUERY_KEY,
+		queryFn: () => smartdnsServer.GetConfigFile("smartdns.conf"),
+	});
+
+	const serverContent = data?.data?.content ?? "";
+	const [content, setContent] = React.useState(serverContent);
 	const [saving, setSaving] = React.useState(false);
-	const contentRef = React.useRef(content);
+	const [saved, setSaved] = React.useState(false);
+	const [saveError, setSaveError] = React.useState("");
 
-	React.useEffect(() => {
-		contentRef.current = content;
-	}, [content]);
+	// Sync content when query data arrives
+	const prevServerContentRef = React.useRef(serverContent);
+	if (serverContent && serverContent !== prevServerContentRef.current) {
+		prevServerContentRef.current = serverContent;
+		setContent(serverContent);
+	}
 
-	React.useEffect(() => {
-		let cancelled = false;
-		const loadConfig = async () => {
-			setLoading(true);
-			setError("");
-			const { error, data } = await smartdnsServer.GetConfigFile("smartdns.conf");
-			if (cancelled) return;
-			if (error || !data) {
-				setError(error?.toString() ?? t("Failed to load configuration file"));
-				setLoading(false);
-				return;
-			}
-			setContent(data.content);
-			setOriginalContent(data.content);
-			setLoading(false);
-		};
-		loadConfig();
-		return () => {
-			cancelled = true;
-		};
-	}, [t]);
+	const isModified = content !== serverContent;
 
 	const handleSave = React.useCallback(async () => {
 		setSaving(true);
-		setError("");
-		const configContent = contentRef.current;
-		const { error } = await smartdnsServer.SaveConfigFile("smartdns.conf", configContent);
+		setSaveError("");
+		const { error } = await smartdnsServer.SaveConfigFile("smartdns.conf", content);
 		setSaving(false);
 		if (error) {
-			setError(error?.toString() ?? t("Failed to save configuration"));
+			setSaveError(error?.toString() ?? t("Failed to save configuration"));
 			return;
 		}
-		setOriginalContent(configContent);
+		// Update the query cache so serverContent matches current content
+		queryClient.setQueryData(CONFIG_QUERY_KEY, (old: any) => ({
+			...old,
+			data: { ...old?.data, content },
+		}));
 		setSaved(true);
 		setTimeout(() => setSaved(false), 3000);
-	}, [t]);
+	}, [content, queryClient, t]);
 
 	const handleReset = React.useCallback(() => {
-		setContent(originalContent);
+		setContent(serverContent);
 		setSaved(false);
-		setError("");
-	}, [originalContent]);
-
-	const isModified = content !== originalContent;
+		setSaveError("");
+	}, [serverContent]);
 
 	return (
 		<Card>
@@ -73,24 +74,24 @@ export function MainConfigPanel(): React.JSX.Element {
 				<Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
 					<Chip label="smartdns.conf" size="small" variant="outlined" color="primary" />
 					<Chip label={t("Main Config")} size="small" color="info" />
-					{!loading && (
+					{!isLoading && content && (
 						<Typography variant="body2" color="text.secondary" sx={{ ml: "auto" }}>
 							{content.split("\n").length} {t("lines")}
 						</Typography>
 					)}
 				</Stack>
 				<Divider sx={{ mb: 2 }} />
-				{loading ? (
+				{isLoading ? (
 					<Stack sx={{ height: 400, alignItems: "center", justifyContent: "center" }}>
 						<CircularProgress size={32} />
 					</Stack>
-				) : (
+				) : content ? (
 					<ConfigEditor content={content} onChange={setContent} />
-				)}
+				) : null}
 			</CardContent>
-			{error && (
+			{(saveError || queryError) && (
 				<Alert severity="error" sx={{ mx: 2 }}>
-					{error}
+					{saveError || queryError?.message}
 				</Alert>
 			)}
 			{saved && (
@@ -100,13 +101,21 @@ export function MainConfigPanel(): React.JSX.Element {
 			)}
 			<Divider />
 			<CardActions sx={{ justifyContent: "flex-end", px: 2 }}>
-				<Button startIcon={<RefreshOutlined />} onClick={handleReset} disabled={loading || !isModified}>
+				<Button startIcon={<RefreshOutlined />} onClick={handleReset} disabled={isLoading || !isModified}>
 					{t("Reset")}
 				</Button>
-				<Button startIcon={<SaveOutlined />} variant="contained" onClick={handleSave} disabled={loading || saving || !isModified}>
+				<Button startIcon={<SaveOutlined />} variant="contained" onClick={handleSave} disabled={isLoading || saving || !isModified}>
 					{t("Save")}
 				</Button>
 			</CardActions>
 		</Card>
+	);
+}
+
+export function MainConfigPanel(): React.JSX.Element {
+	return (
+		<QueryClientProvider client={queryClient}>
+			<MainConfigPanelInner />
+		</QueryClientProvider>
 	);
 }

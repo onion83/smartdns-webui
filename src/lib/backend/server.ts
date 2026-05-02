@@ -42,7 +42,6 @@ class DataServer {
         }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any  -- Expected
     async fetch<T>(path: string, method: string, headers: HeadersInit, bodyData: any, noSignOut = false): Promise<FetchResponse<T>> {
         try {
             let response;
@@ -278,6 +277,7 @@ export interface GeositeFileInfo {
 }
 
 export interface GeositeFileContent {
+    tag: string;
     path: string;
     content: string;
     file_info?: {
@@ -293,6 +293,7 @@ export interface GeositeListResponse {
 
 export interface GeositeDownloadResponse {
     message: string;
+    file?: GeositeFileInfo;
 }
 
 export interface UpStreamServers {
@@ -647,23 +648,23 @@ class SmartDNSAPI {
         return { data: ret.data.geosite_files };
     }
 
-    async GetGeositeFile(path: string, cachePath?: string): Promise<{ error?: ServerError, data?: GeositeFileContent | null }> {
-        const params = new URLSearchParams({ path });
-        if (cachePath) {
-            params.set('cache_path', cachePath);
-        }
-        const ret = await this.server.fetch<GeositeFileContent>(`/api/config/geosite/file?${params.toString()}`, 'GET', {}, {});
+    async GetGeositeFile(tag: string): Promise<{ error?: ServerError, data?: GeositeFileContent | null }> {
+        const ret = await this.server.fetch<GeositeFileContent>(`/api/config/geosite/file?tag=${encodeURIComponent(tag)}`, 'GET', {}, {});
         return ret;
     }
 
-    async SaveGeositeFile(path: string, content: string, cachePath?: string): Promise<{ error?: ServerError }> {
-        const params = new URLSearchParams({ path });
-        if (cachePath) {
-            params.set('cache_path', cachePath);
-        }
-        return this.server.fetch<null>(`/api/config/geosite/file?${params.toString()}`, 'PUT', {}, { content });
+    async SaveGeositeFile(tag: string, content: string): Promise<{ error?: ServerError }> {
+        const ret = await this.server.fetch<null>(`/api/config/geosite/file?tag=${encodeURIComponent(tag)}`, 'PUT', {}, { content });
+        return ret;
     }
 
+    /** Download a single remote geosite file by tag (only works for remote sources) */
+    async DownloadGeositeFile(tag: string): Promise<{ error?: ServerError, data?: GeositeDownloadResponse | null }> {
+        const ret = await this.server.fetch<GeositeDownloadResponse>(`/api/config/geosite/download?tag=${encodeURIComponent(tag)}`, 'POST', {}, {});
+        return ret;
+    }
+
+    /** Download all remote geosite files (legacy, kept for compatibility) */
     async DownloadGeositeFiles(): Promise<{ error?: ServerError, data?: GeositeDownloadResponse | null }> {
         const ret = await this.server.fetch<GeositeDownloadResponse>('/api/config/geosite/download', 'POST', {}, {});
         return ret;
