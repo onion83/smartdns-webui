@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import React, { useMemo } from "react";
 import Stack from "@mui/material/Stack";
 import {
 	Alert,
@@ -19,7 +19,7 @@ import {
 	Typography,
 } from "@mui/material";
 import { ConfigEditor } from "@/components/common/config-editor";
-import { smartdnsServer, type GeositeFileInfo, type GeositeFileContent, type ServerError } from "@/lib/backend/server";
+import { smartdnsServer, type GeositeFileInfo } from "@/lib/backend/server";
 import { SaveOutlined, RefreshOutlined, CloudDownloadOutlined } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -83,7 +83,7 @@ function GeositeConfigPanelInner(): React.JSX.Element {
 		queryFn: () => smartdnsServer.GetGeositeList(),
 	});
 
-	const files = listData?.data ?? [];
+	const files = useMemo(() => (listData?.data ?? []).toSorted((a, b) => a.name.localeCompare(b.name)), [listData?.data]);
 
 	const [selectedFile, setSelectedFile] = React.useState("");
 	const [content, setContent] = React.useState("");
@@ -169,11 +169,7 @@ function GeositeConfigPanelInner(): React.JSX.Element {
 			return;
 		}
 		smartdnsServer.FlushCache();
-		// Update query cache
-		queryClient.setQueryData<{ error?: ServerError; data?: GeositeFileContent | null }>(geositeFileKey(currentFile.name), (old) => {
-			if (!old?.data) return old;
-			return { ...old, data: { ...old.data, content: rawContent } };
-		});
+		queryClient.invalidateQueries({ queryKey: geositeFileKey(currentFile.name) });
 		setSaved(true);
 		setTimeout(() => setSaved(false), 3000);
 	}, [currentFile, content, queryClient, t]);
