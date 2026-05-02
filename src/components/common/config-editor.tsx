@@ -68,6 +68,7 @@ export function ConfigEditor({
 					borderRadius: "8px",
 					overflow: maxHeight ? "hidden" : undefined,
 					border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)"}`,
+					height: maxHeightPx === "100%" ? "100%" : undefined,
 				}}
 				basicSetup={{
 					lineNumbers: true,

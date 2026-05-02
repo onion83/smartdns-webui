@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import Stack from "@mui/material/Stack";
 import {
 	Alert,
+	Box,
 	Button,
 	Card,
 	CardActions,
@@ -181,9 +182,9 @@ function GeositeConfigPanelInner(): React.JSX.Element {
 	}, [rawServerContent]);
 
 	return (
-		<Card>
-			<CardContent>
-				<Stack spacing={2} sx={{ mb: 2 }}>
+		<Card sx={{ display: "flex", flexDirection: "column", height: "calc(100vh - 260px)" }}>
+			<CardContent sx={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+				<Stack spacing={2} sx={{ mb: 2, flexShrink: 0 }}>
 					<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
 						{t("Geosite Data Files")}
 					</Typography>
@@ -244,13 +245,15 @@ function GeositeConfigPanelInner(): React.JSX.Element {
 						</Stack>
 					)}
 				</Stack>
-				<Divider sx={{ mb: 2 }} />
+				<Divider sx={{ mb: 2, flexShrink: 0 }} />
 				{fileLoading ? (
-					<Stack sx={{ height: 300, alignItems: "center", justifyContent: "center" }}>
+					<Stack sx={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
 						<CircularProgress size={32} />
 					</Stack>
 				) : content ? (
-					<ConfigEditor content={content} onChange={setContent} readOnly={false} maxHeight={500} />
+					<Box sx={{ flex: 1, minHeight: 0 }}>
+						<ConfigEditor content={content} onChange={setContent} readOnly={false} maxHeight="100%" minHeight="0" />
+					</Box>
 				) : null}
 			</CardContent>
 			{(error || listError) && (

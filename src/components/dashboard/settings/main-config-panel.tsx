@@ -3,7 +3,7 @@
 import * as React from "react";
 import Stack from "@mui/material/Stack";
 import { useMemo } from "react";
-import { Alert, Button, Card, CardActions, CardContent, Chip, CircularProgress, Divider, Typography } from "@mui/material";
+import { Alert, Box, Button, Card, CardActions, CardContent, Chip, CircularProgress, Divider, Typography } from "@mui/material";
 import { ConfigEditor } from "@/components/common/config-editor";
 import { smartdnsServer, type ConfigFileData, type ServerError } from "@/lib/backend/server";
 import { SaveOutlined, RefreshOutlined } from "@mui/icons-material";
@@ -60,13 +60,11 @@ function MainConfigPanelInner(): React.JSX.Element {
 	const serverContent = fileData?.data?.content ?? "";
 	const [content, setContent] = React.useState("");
 	const [contentPath, setContentPath] = React.useState<string | null>(null);
+	const [savedContent, setSavedContent] = React.useState("");
 	const [saving, setSaving] = React.useState(false);
 	const [saved, setSaved] = React.useState(false);
 	const [saveError, setSaveError] = React.useState("");
 	const [validating, setValidating] = React.useState(false);
-
-	// Track the last saved/loaded content for dirty check (avoid React Query timing issues)
-	const savedContentRef = React.useRef("");
 
 	// When new file content arrives (and loading is done), update editor and track which file it belongs to
 	// Guard with !isLoadingContent to prevent stale content from being applied during file switch
@@ -74,16 +72,16 @@ function MainConfigPanelInner(): React.JSX.Element {
 		if (!isLoadingContent && serverContent && selectedPath) {
 			setContent(serverContent);
 			setContentPath(selectedPath);
-			savedContentRef.current = serverContent;
+			setSavedContent(serverContent);
 			if (contentPath !== selectedPath) {
 				setSaved(false);
 			}
 			setSaveError("");
 		}
-	}, [serverContent, selectedPath, isLoadingContent]);
+	}, [serverContent, selectedPath, isLoadingContent, contentPath]);
 
 	// Only consider modified when content differs from last saved/loaded content
-	const isModified = contentPath === selectedPath && content !== savedContentRef.current;
+	const isModified = contentPath === selectedPath && content !== savedContent;
 
 	const handleSave = React.useCallback(async () => {
 		if (!selectedPath) return;
@@ -109,7 +107,7 @@ function MainConfigPanelInner(): React.JSX.Element {
 			setSaveError(validateResult.data?.message ?? t("Configuration validation failed"));
 			return;
 		}
-		savedContentRef.current = content;
+		setSavedContent(content);
 		queryClient.setQueryData<{ error?: ServerError; data?: ConfigFileData | null }>(
 			["config", "file", selectedPath],
 			(old) => {
@@ -124,7 +122,7 @@ function MainConfigPanelInner(): React.JSX.Element {
 
 	const handleReset = React.useCallback(() => {
 		setContent(serverContent);
-		savedContentRef.current = serverContent;
+		setSavedContent(serverContent);
 		setSaved(false);
 		setSaveError("");
 	}, [serverContent]);
@@ -143,9 +141,9 @@ function MainConfigPanelInner(): React.JSX.Element {
 	const selectedFile = confFiles.find((f) => f.path === selectedPath);
 
 	return (
-		<Card>
-			<CardContent>
-				<Stack spacing={1} direction="row" alignItems="center" sx={{ mb: 1, flexWrap: "wrap", gap: 1 }}>
+		<Card sx={{ display: "flex", flexDirection: "column", height: "calc(100vh - 260px)" }}>
+			<CardContent sx={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+				<Stack spacing={1} direction="row" alignItems="center" sx={{ mb: 1, flexWrap: "wrap", gap: 1, flexShrink: 0 }}>
 					{isLoadingFiles ? (
 						<CircularProgress size={20} />
 					) : (
@@ -168,17 +166,19 @@ function MainConfigPanelInner(): React.JSX.Element {
 					)}
 				</Stack>
 				{selectedFile && (
-					<Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+					<Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block", flexShrink: 0 }}>
 						{selectedFile.type === "main" ? t("Main Config") : t("Sub Config")} — {selectedFile.path}
 					</Typography>
 				)}
-				<Divider sx={{ mb: 2 }} />
+				<Divider sx={{ mb: 2, flexShrink: 0 }} />
 				{isLoadingContent ? (
-					<Stack sx={{ height: 400, alignItems: "center", justifyContent: "center" }}>
+					<Stack sx={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
 						<CircularProgress size={32} />
 					</Stack>
 				) : content ? (
-					<ConfigEditor content={content} onChange={setContent} />
+					<Box sx={{ flex: 1, minHeight: 0 }}>
+						<ConfigEditor content={content} onChange={setContent} maxHeight="100%" minHeight="0" />
+					</Box>
 				) : null}
 			</CardContent>
 			{(saveError || filesError || contentError) && (
