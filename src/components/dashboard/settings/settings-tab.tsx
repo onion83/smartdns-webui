@@ -7,10 +7,11 @@ import { UpdatePasswordForm } from "@/components/dashboard/settings/update-passw
 import { ChangeLang } from "@/components/dashboard/settings/change-lang";
 import { MainConfigPanel } from "@/components/dashboard/settings/main-config-panel";
 import { GeositeConfigPanel } from "@/components/dashboard/settings/geosite-config-panel";
+import { CheckDomainRulePanel } from "@/components/dashboard/settings/check-domain-rule-panel";
 import { TabContext, TabList, TabPanel } from "@mui/lab";
 import { Box, Card, CardContent, Tab, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { DescriptionOutlined, PublicOutlined } from "@mui/icons-material";
+import { DescriptionOutlined, PublicOutlined, TroubleshootOutlined } from "@mui/icons-material";
 
 const tabs = [
 	{
@@ -28,6 +29,10 @@ const tabs = [
 	{
 		label: "Geosite Config",
 		icon: <PublicOutlined fontSize="small" sx={{ mr: 0.5 }} />,
+	},
+	{
+		label: "Rule Checker",
+		icon: <TroubleshootOutlined fontSize="small" sx={{ mr: 0.5 }} />,
 	},
 ];
 
@@ -67,6 +72,7 @@ export default function SettingsTab(): React.JSX.Element {
 							<TabPanel value="1"><ChangeLang /></TabPanel>
 							<TabPanel value="2"><MainConfigPanel /></TabPanel>
 							<TabPanel value="3"><GeositeConfigPanel /></TabPanel>
+							<TabPanel value="4"><CheckDomainRulePanel /></TabPanel>
 						</CardContent>
 					</TabContext>
 				</Typography>

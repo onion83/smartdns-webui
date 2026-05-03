@@ -6,6 +6,7 @@ import IconButton from '@mui/material/IconButton';
 import Stack from '@mui/material/Stack';
 import { MobileNav } from './mobile-nav';
 import { MainToolBar } from './main-toolbar';
+import { ServerUptime } from './server-uptime';
 import { Typography } from '@mui/material';
 import { MenuOutlined } from '@mui/icons-material';
 
@@ -47,6 +48,9 @@ export function MainNav({ pageTitle, onRestarted }: MainNavProps): React.JSX.Ele
             <Stack>
               <Typography variant="h5">{pageTitle}</Typography>
             </Stack>
+          </Stack>
+          <Stack sx={{ alignItems: 'center', display: { xs: 'flex', lg: 'none' } }}>
+            <ServerUptime />
           </Stack>
           <MainToolBar onRestarted={onRestarted} />
         </Stack>

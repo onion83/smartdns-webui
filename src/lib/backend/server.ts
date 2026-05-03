@@ -311,6 +311,36 @@ export interface GeositeDownloadResponse {
     file?: GeositeFileInfo;
 }
 
+export interface DnsServerQueryResult {
+    server: string;
+    rcode: string;
+    rcode_num: number;
+    cname: string;
+    ips: string;
+    ip_count: number;
+    ttl: number;
+    ping_ms: number;
+}
+
+export interface DomainResolveChain {
+    domain: string;
+    rule_name: string;
+    matched_pattern: string;
+    action: string;
+    address: string;
+    group_name: string;
+    server_num: number;
+    servers: string[];
+    query_results: DnsServerQueryResult[];
+    final_rcode: string;
+    final_rcode_num: number;
+    final_ips: string;
+    final_cname: string;
+    final_from: string;
+    final_ttl: number;
+    final_ping_ms: number;
+}
+
 export interface UpStreamServers {
     host: string;
     ip: string;
@@ -660,6 +690,10 @@ class SmartDNSAPI {
 
     async ValidateConfig(): Promise<{ error?: ServerError, data?: ConfigValidateResult | null }> {
         return this.server.fetch<ConfigValidateResult>('/api/config/validate', 'POST', {}, {});
+    }
+
+    async CheckDomainRule(domain: string): Promise<{ error?: ServerError, data?: DomainResolveChain | null }> {
+        return this.server.fetch<DomainResolveChain>(`/api/config/check-domain-rule?domain=${encodeURIComponent(domain)}`, 'GET', {}, {});
     }
 
     async GetGeositeList(): Promise<{ error?: ServerError, data?: GeositeFileInfo[] | null }> {
