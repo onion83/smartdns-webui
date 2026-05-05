@@ -219,7 +219,7 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 			</Box>
 
 			{/* Section 3: Per-Server Query Results */}
-			{hasNameserver && chain.query_results.length > 0 && (
+			{(hasNameserver || !hasAddress) && chain.query_results.length > 0 && (
 				<Box>
 					<SectionLabel>{t("Per-Server Results")}</SectionLabel>
 					<TableContainer

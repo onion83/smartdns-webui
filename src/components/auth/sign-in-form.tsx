@@ -11,9 +11,12 @@ import InputLabel from '@mui/material/InputLabel';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import { useTranslation } from 'react-i18next';
 import { Controller, useForm } from 'react-hook-form';
 import { z as zod } from 'zod';
+import Cookies from 'js-cookie';
 
 import { authClient } from '@/lib/auth/client';
 import { useUser } from '@/hooks/use-user';
@@ -28,7 +31,9 @@ const schema = zod.object({
 
 type Values = zod.infer<typeof schema>;
 
-const defaultValues = { username: '', password: '' } satisfies Values;
+const COOKIE_KEY_USERNAME = 'smartdns_remember_user';
+const COOKIE_KEY_PASSWORD = 'smartdns_remember_pass';
+const COOKIE_MAX_AGE_DAYS = 365;
 
 async function setupUserSettings(settings: Settings): Promise<void> {
   const user = await authClient.getUser();
@@ -47,16 +52,39 @@ export function SignInForm(): React.JSX.Element {
   const { checkSession } = useUser();
   const [showPassword, setShowPassword] = React.useState<boolean>();
   const [isPending, setIsPending] = React.useState<boolean>(false);
+  const [rememberMe, setRememberMe] = React.useState<boolean>(false);
   const {
     control,
     handleSubmit,
     setError,
+    reset,
     formState: { errors },
-  } = useForm<Values>({ defaultValues, resolver: zodResolver(schema) });
+  } = useForm<Values>({
+    defaultValues: { username: '', password: '' },
+    resolver: zodResolver(schema),
+  });
+
+  // Load saved credentials from cookies on mount
+  React.useEffect(() => {
+    const savedUser = Cookies.get(COOKIE_KEY_USERNAME);
+    const savedPass = Cookies.get(COOKIE_KEY_PASSWORD);
+    if (savedUser) {
+      setRememberMe(true);
+      reset({ username: savedUser, password: savedPass ?? '' });
+    }
+  }, [reset]);
 
   const onSubmit = React.useCallback(
     async (values: Values): Promise<void> => {
       setIsPending(true);
+
+      if (rememberMe) {
+        Cookies.set(COOKIE_KEY_USERNAME, values.username, { expires: COOKIE_MAX_AGE_DAYS, sameSite: 'lax' });
+        Cookies.set(COOKIE_KEY_PASSWORD, values.password, { expires: COOKIE_MAX_AGE_DAYS, sameSite: 'lax' });
+      } else {
+        Cookies.remove(COOKIE_KEY_USERNAME);
+        Cookies.remove(COOKIE_KEY_PASSWORD);
+      }
 
       const { error } = await authClient.signInWithPassword(values);
 
@@ -70,12 +98,11 @@ export function SignInForm(): React.JSX.Element {
         if (settings.data) {
           await setupUserSettings(settings.data);
         }
-        
+
         if (settings.error) {
           setError('root', { type: 'server', message: t(smartdnsServer.getErrorMessage(settings.error)) });
           setIsPending(false);
         }
-
       }).catch((_error: unknown) => {
         // NOOP
       });
@@ -87,7 +114,7 @@ export function SignInForm(): React.JSX.Element {
       // After refresh, GuestGuard will handle the redirect
       router.refresh();
     },
-    [t, checkSession, router, setError]
+    [t, checkSession, router, setError, rememberMe]
   );
 
   return (
@@ -146,10 +173,29 @@ export function SignInForm(): React.JSX.Element {
               </FormControl>
             )}
           />
+          <Stack direction="row" alignItems="center">
+            <Button disabled={isPending} type="submit" variant="contained" sx={{ flex: '0 0 61.8%' }}>
+              {t('Sign in')}
+            </Button>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={rememberMe}
+                  onChange={(_event: React.ChangeEvent<HTMLInputElement>, checked: boolean): void => {
+                    setRememberMe(checked);
+                    if (!checked) {
+                      Cookies.remove(COOKIE_KEY_USERNAME);
+                      Cookies.remove(COOKIE_KEY_PASSWORD);
+                    }
+                  }}
+                  size="small"
+                />
+              }
+              label={t('Remember me')}
+              sx={{ flex: '0 0 38.2%', ml: 1, justifyContent: 'center' }}
+            />
+          </Stack>
           {errors.root ? <Alert severity="error">{t(errors.root.message ?? '')}</Alert> : null}
-          <Button disabled={isPending} type="submit" variant="contained">
-            {t('Sign in')}
-          </Button>
         </Stack>
       </form>
     </Stack>
