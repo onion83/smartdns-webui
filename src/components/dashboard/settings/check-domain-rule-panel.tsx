@@ -38,6 +38,19 @@ const queryClient = new QueryClient({
 	},
 });
 
+const RESPONSE_MODE_NAMES: Record<string, string> = {
+	"FIRST_PING_IP": "First Ping IP",
+	"FASTEST_IP": "Fastest IP",
+	"FASTEST_RESPONSE": "Fastest Response",
+};
+
+function ResponseModeLabel({ mode }: { mode: string }): React.JSX.Element {
+	const name = RESPONSE_MODE_NAMES[mode] ?? `MODE_${mode}`;
+	return (
+		<Chip label={name} size="small" variant="outlined" color="info" sx={{ fontFamily: "monospace", fontSize: "0.7rem" }} />
+	);
+}
+
 const ACTION_COLORS: Record<string, "default" | "success" | "warning" | "error" | "info"> = {
 	NONE: "default",
 	ADDRESS: "info",
@@ -125,6 +138,7 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 	const isPass = chain.rule_name === "PASS";
 	const hasAddress = chain.action === "ADDRESS";
 	const hasNameserver = chain.action === "NAMESERVER";
+	const isCacheHit = chain.cache_result.hit === 1;
 
 	return (
 		<Stack spacing={2.5}>
@@ -175,7 +189,45 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 				</Card>
 			</Box>
 
-			{/* Section 2: Action Details */}
+			{/* Section 2: Cache Result */}
+			{(hasNameserver || !hasAddress) && (
+				<Box>
+					<SectionLabel>{t("Cache Status")}</SectionLabel>
+					<Card variant="outlined" sx={{ mt: 0.75, p: 1.5 }}>
+						<Stack spacing={1} direction="row" alignItems="center" flexWrap="wrap" useFlexGap gap={1}>
+							<Chip
+								label={isCacheHit ? t("Cache HIT") : t("Cache MISS")}
+								size="small"
+								color={isCacheHit ? "success" : "default"}
+								variant={isCacheHit ? "filled" : "outlined"}
+							/>
+							{isCacheHit && (
+								<>
+									{chain.cache_result.ttl > 0 && (
+										<Chip label={`TTL ${chain.cache_result.ttl}s`} size="small" variant="outlined" sx={{ fontSize: "0.7rem" }} />
+									)}
+									{chain.cache_result.speed > 0 && (
+										<Chip
+											label={`${(chain.cache_result.speed / 10).toFixed(1)}ms`}
+											size="small"
+											variant="outlined"
+											color="success"
+											sx={{ fontSize: "0.7rem" }}
+										/>
+									)}
+									{chain.cache_result.from_group && (
+										<Typography variant="body2" color="text.secondary" sx={{ fontFamily: "monospace" }}>
+											from group: {chain.cache_result.from_group}
+										</Typography>
+									)}
+								</>
+							)}
+						</Stack>
+					</Card>
+				</Box>
+			)}
+
+			{/* Section 3: Action Details */}
 			<Box>
 				<SectionLabel>{t("Action Details")}</SectionLabel>
 				<Card variant="outlined" sx={{ mt: 0.75, p: 1.5 }}>
@@ -218,8 +270,8 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 				</Card>
 			</Box>
 
-			{/* Section 3: Per-Server Query Results */}
-			{(hasNameserver || !hasAddress) && chain.query_results.length > 0 && (
+			{/* Section 4: Per-Server Query Results (only if cache miss) */}
+			{(hasNameserver || !hasAddress) && !isCacheHit && chain.query_results.length > 0 && (
 				<Box>
 					<SectionLabel>{t("Per-Server Results")}</SectionLabel>
 					<TableContainer
@@ -293,7 +345,37 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 				</Box>
 			)}
 
-			{/* Section 4: Final Result */}
+			{/* Section 5: Ping Results (Speed Check) */}
+			{(hasNameserver || !hasAddress) && !isCacheHit && chain.ping_results.length > 0 && (
+				<Box>
+					<SectionLabel>{t("Speed Check")}</SectionLabel>
+					<Card variant="outlined" sx={{ mt: 0.75, p: 1.5 }}>
+						<Stack spacing={1}>
+							<ResponseModeLabel mode={chain.response_mode} />
+							{chain.ping_results.map((pr, i) => (
+								<Stack key={i} spacing={0.5} direction="row" alignItems="center">
+									<Typography variant="body2" sx={{ fontFamily: "monospace", minWidth: 140 }}>
+										{pr.ip}
+									</Typography>
+									{pr.is_timeout === 1 ? (
+										<Chip label={t("Timeout")} size="small" color="warning" variant="outlined" sx={{ fontSize: "0.7rem" }} />
+									) : (
+										<Chip
+											label={`${pr.ping_ms}ms`}
+											size="small"
+											color={pr.ping_ms > 100 ? "warning" : "success"}
+											variant="outlined"
+											sx={{ fontSize: "0.7rem" }}
+										/>
+									)}
+								</Stack>
+							))}
+						</Stack>
+					</Card>
+				</Box>
+			)}
+
+			{/* Section 6: Final Result */}
 			<Box>
 				<SectionLabel>{t("Final Result")}</SectionLabel>
 				<Card

@@ -322,6 +322,24 @@ export interface DnsServerQueryResult {
     ping_ms: number;
 }
 
+export interface DomainRuleCacheResult {
+    hit: number;
+    ttl: number;
+    speed: number;
+    ips: string;
+    cname: string;
+    rcode: number;
+    from_group: string;
+}
+
+export interface IpPingResult {
+    ip: string;
+    addr_type: number;
+    ping_time: number;
+    ping_ms: number;
+    is_timeout: number;
+}
+
 export interface DomainResolveChain {
     domain: string;
     rule_name: string;
@@ -332,6 +350,10 @@ export interface DomainResolveChain {
     server_num: number;
     servers: string[];
     query_results: DnsServerQueryResult[];
+    cache_result: DomainRuleCacheResult;
+    ping_results: IpPingResult[];
+    speed_check_enabled: number;
+    response_mode: string;
     final_rcode: string;
     final_rcode_num: number;
     final_ips: string;
