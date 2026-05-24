@@ -9,6 +9,8 @@ import { MainToolBar } from './main-toolbar';
 import { ServerUptime } from './server-uptime';
 import { Typography } from '@mui/material';
 import { MenuOutlined } from '@mui/icons-material';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 interface MainNavProps {
   pageTitle: string;
@@ -17,6 +19,8 @@ interface MainNavProps {
 
 export function MainNav({ pageTitle, onRestarted }: MainNavProps): React.JSX.Element {
   const [openNav, setOpenNav] = React.useState<boolean>(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
 
   return (
     <React.Fragment>
@@ -34,25 +38,53 @@ export function MainNav({ pageTitle, onRestarted }: MainNavProps): React.JSX.Ele
         <Stack
           direction="row"
           spacing={2}
-          sx={{ alignItems: 'center', justifyContent: 'space-between', minHeight: '64px', px: 2 }}
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            minHeight: '64px',
+            px: 2,
+            overflow: 'hidden',
+          }}
         >
-          <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
+          <Stack sx={{ alignItems: 'center', minWidth: 0, flex: '0 1 auto' }} direction="row" spacing={2}>
             <IconButton
               onClick={(): void => {
                 setOpenNav(true);
               }}
-              sx={{ display: { lg: 'none' } }}
+              sx={{ display: { lg: 'none' }, flexShrink: 0 }}
             >
               <MenuOutlined />
             </IconButton>
-            <Stack>
-              <Typography variant="h5">{pageTitle}</Typography>
+            <Stack sx={{ minWidth: 0 }}>
+              <Typography variant="h5" noWrap>
+                {pageTitle}
+              </Typography>
             </Stack>
           </Stack>
-          <Stack sx={{ alignItems: 'center', display: { xs: 'flex', lg: 'none' } }}>
+          <Box
+            component="span"
+            sx={{
+              display: { xs: 'block', lg: 'none' },
+              flexShrink: 0,
+            }}
+          >
             <ServerUptime />
-          </Stack>
-          <MainToolBar onRestarted={onRestarted} />
+          </Box>
+          <Box
+            sx={{
+              display: isMobile ? 'inline-flex' : 'flex',
+              alignItems: 'center',
+              maxWidth: isMobile ? '110px' : undefined,
+              minWidth: isMobile ? 'auto' : undefined,
+              overflowX: isMobile ? 'scroll' : 'visible',
+              scrollbarWidth: 'none',
+              '&::-webkit-scrollbar': { display: 'none' },
+              msOverflowStyle: 'none',
+              flexShrink: 0,
+            }}
+          >
+            <MainToolBar onRestarted={onRestarted} />
+          </Box>
         </Stack>
       </Box>
       <MobileNav

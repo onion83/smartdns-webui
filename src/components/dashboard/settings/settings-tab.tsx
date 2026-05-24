@@ -9,19 +9,11 @@ import { MainConfigPanel } from "@/components/dashboard/settings/main-config-pan
 import { GeositeConfigPanel } from "@/components/dashboard/settings/geosite-config-panel";
 import { CheckDomainRulePanel } from "@/components/dashboard/settings/check-domain-rule-panel";
 import { TabContext, TabList, TabPanel } from "@mui/lab";
-import { Box, Card, CardContent, Tab, Typography } from "@mui/material";
+import { Box, Card, CardContent, Tab } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { DescriptionOutlined, PublicOutlined, TroubleshootOutlined } from "@mui/icons-material";
+import { DescriptionOutlined, PublicOutlined, TroubleshootOutlined, LockResetOutlined, LanguageOutlined } from "@mui/icons-material";
 
 const tabs = [
-	{
-		label: "Password",
-		icon: undefined,
-	},
-	{
-		label: "Language",
-		icon: undefined,
-	},
 	{
 		label: "Main Config",
 		icon: <DescriptionOutlined fontSize="small" sx={{ mr: 0.5 }} />,
@@ -34,6 +26,14 @@ const tabs = [
 		label: "Rule Checker",
 		icon: <TroubleshootOutlined fontSize="small" sx={{ mr: 0.5 }} />,
 	},
+	{
+		label: "Password",
+		icon: <LockResetOutlined fontSize="small" sx={{ mr: 0.5 }} />,
+	},
+	{
+		label: "Language",
+		icon: <LanguageOutlined fontSize="small" sx={{ mr: 0.5 }} />,
+	},
 ];
 
 export default function SettingsTab(): React.JSX.Element {
@@ -41,41 +41,39 @@ export default function SettingsTab(): React.JSX.Element {
 	const [value, setValue] = React.useState("0");
 
 	return (
-		<Stack spacing={1}>
-			<Card>
-				<Typography variant="h4" sx={{ marginTop: -2 }}>
-					<TabContext value={value}>
-						<CardContent>
-							<Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-								<TabList
-									onChange={(_event, newValue) => setValue(newValue)}
-									variant="scrollable"
-									scrollButtons="auto"
-								>
-									{tabs.map((tab, index) => {
-										return (
-											<Tab
-												key={tab.label}
-												label={
-													<Stack direction="row" alignItems="center" spacing={0.5}>
-														{tab.icon}
-														{t(tab.label)}
-													</Stack>
-												}
-												value={index.toString()}
-											/>
-										);
-									})}
-								</TabList>
-							</Box>
-							<TabPanel value="0"><UpdatePasswordForm /></TabPanel>
-							<TabPanel value="1"><ChangeLang /></TabPanel>
-							<TabPanel value="2"><MainConfigPanel /></TabPanel>
-							<TabPanel value="3"><GeositeConfigPanel /></TabPanel>
-							<TabPanel value="4"><CheckDomainRulePanel /></TabPanel>
-						</CardContent>
-					</TabContext>
-				</Typography>
+		<Stack spacing={1} sx={{ width: "100%" }}>
+			<Card sx={{ width: "100%" }}>
+				<TabContext value={value}>
+					<CardContent sx={{ width: "100%", maxWidth: "100%", px: 2 }}>
+						<Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+							<TabList
+								onChange={(_event, newValue) => setValue(newValue)}
+								variant="scrollable"
+								scrollButtons="auto"
+							>
+								{tabs.map((tab, index) => {
+									return (
+										<Tab
+											key={tab.label}
+											label={
+												<Stack direction="row" alignItems="center" spacing={0.5}>
+													{tab.icon}
+													{t(tab.label)}
+												</Stack>
+											}
+											value={index.toString()}
+										/>
+									);
+								})}
+							</TabList>
+						</Box>
+						<TabPanel value="0" sx={{ width: "100%", px: 0 }}><MainConfigPanel /></TabPanel>
+						<TabPanel value="1" sx={{ width: "100%", px: 0 }}><GeositeConfigPanel /></TabPanel>
+						<TabPanel value="2" sx={{ width: "100%", px: 0 }}><CheckDomainRulePanel /></TabPanel>
+						<TabPanel value="3" sx={{ width: "100%", px: 0 }}><UpdatePasswordForm /></TabPanel>
+						<TabPanel value="4" sx={{ width: "100%", px: 0 }}><ChangeLang /></TabPanel>
+					</CardContent>
+				</TabContext>
 			</Card>
 		</Stack>
 	);

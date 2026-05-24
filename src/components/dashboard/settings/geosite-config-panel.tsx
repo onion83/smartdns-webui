@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import Stack from "@mui/material/Stack";
 import {
 	Alert,
@@ -12,11 +12,13 @@ import {
 	Chip,
 	CircularProgress,
 	Divider,
+	Fade,
 	FormControl,
 	InputLabel,
 	MenuItem,
 	Select,
 	type SelectChangeEvent,
+	Tooltip,
 	Typography,
 } from "@mui/material";
 import { ConfigEditor } from "@/components/common/config-editor";
@@ -39,7 +41,7 @@ const GEOSITE_LIST_KEY = ["geosite", "list"];
 const geositeFileKey = (tag: string) => ["geosite", "file", tag];
 
 /** Build 3-line header comment for the editor display */
-function buildFileHeader(fileInfo?: { path: string; size: number; modified: string }): string {
+function buildFileHeader(fileInfo?: { path: string; size: number; modified: string; lineCount?: number }): string {
 	if (!fileInfo) return "";
 	let localTime = fileInfo.modified;
 	if (fileInfo.modified.endsWith("Z")) {
@@ -49,7 +51,7 @@ function buildFileHeader(fileInfo?: { path: string; size: number; modified: stri
 			localTime = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 		}
 	}
-	return `# ${fileInfo.path}\n# ${fileInfo.size} bytes\n# ${localTime}\n`;
+	return `# ${fileInfo.path}\n# ${fileInfo.lineCount ?? 0} lines | ${fileInfo.size} bytes\n# ${localTime}\n`;
 }
 
 /** Strip the 3-line header (lines starting with # containing metadata) from editor content */
@@ -61,7 +63,7 @@ function stripFileHeader(text: string): string {
 		const trimmed = line.trim();
 		if (
 			trimmed.startsWith("#") &&
-			(/^#\s*\//.test(trimmed) || /^#\s*\d+\s*bytes/.test(trimmed) || /^#\s*\d{4}-/.test(trimmed))
+			(/^#\s*\//.test(trimmed) || /^#\s*\d+\s*lines\s*\|/.test(trimmed) || /^#\s*\d{4}-/.test(trimmed))
 		) {
 			stripCount++;
 		} else {
@@ -93,6 +95,30 @@ function GeositeConfigPanelInner(): React.JSX.Element {
 	const [error, setError] = React.useState("");
 	const [downloading, setDownloading] = React.useState(false);
 	const [updateMsg, setUpdateMsg] = React.useState("");
+	const [copyTooltipOpen, setCopyTooltipOpen] = React.useState(false);
+	const copyTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const handleCopyPath = useCallback(async (path: string) => {
+		try {
+			await navigator.clipboard.writeText(path);
+			setCopyTooltipOpen(true);
+			if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+			copyTimerRef.current = setTimeout(() => setCopyTooltipOpen(false), 2000);
+		} catch {
+			// fallback for older browsers
+			const ta = document.createElement("textarea");
+			ta.value = path;
+			ta.style.position = "fixed";
+			ta.style.opacity = "0";
+			document.body.appendChild(ta);
+			ta.select();
+			document.execCommand("copy");
+			document.body.removeChild(ta);
+			setCopyTooltipOpen(true);
+			if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+			copyTimerRef.current = setTimeout(() => setCopyTooltipOpen(false), 2000);
+		}
+	}, []);
 
 	// Query for file content
 	const currentFile = files.find((f) => f.name === selectedFile);
@@ -107,7 +133,14 @@ function GeositeConfigPanelInner(): React.JSX.Element {
 	});
 
 	// Sync content from query result
-	const rawServerContent = fileData?.data ? buildFileHeader(fileData.data.file_info) + fileData.data.content : "";
+	const rawServerContent = fileData?.data
+		? buildFileHeader({
+				path: fileData.data.file_info?.path ?? fileData.data.path ?? "",
+				size: fileData.data.file_info?.size ?? 0,
+				modified: fileData.data.file_info?.modified ?? "",
+				lineCount: fileData.data.content ? fileData.data.content.split("\n").length : 0,
+			}) + fileData.data.content
+		: "";
 
 	React.useEffect(() => {
 		if (rawServerContent) {
@@ -212,18 +245,29 @@ function GeositeConfigPanelInner(): React.JSX.Element {
 										color={currentFile.source === "local" ? "success" : "warning"}
 										variant="outlined"
 									/>
-									<Typography
-										variant="caption"
-										color="text.secondary"
-										sx={{
-											maxWidth: 400,
-											overflow: "hidden",
-											textOverflow: "ellipsis",
-											whiteSpace: "nowrap",
-										}}
+									<Tooltip
+										title={t("Copied!")}
+										open={copyTooltipOpen}
+										TransitionComponent={Fade}
+										TransitionProps={{ timeout: 600 }}
+										placement="top"
 									>
-										{currentFile.path}
-									</Typography>
+										<Typography
+											variant="caption"
+											color="text.secondary"
+											sx={{
+												maxWidth: 400,
+												overflow: "hidden",
+												textOverflow: "ellipsis",
+												whiteSpace: "nowrap",
+												cursor: "pointer",
+												"&:hover": { color: "primary.main" },
+											}}
+											onClick={() => handleCopyPath(currentFile.path)}
+										>
+											{currentFile.path}
+										</Typography>
+									</Tooltip>
 								</Stack>
 							)}
 							{isRemote && selectedFile && (

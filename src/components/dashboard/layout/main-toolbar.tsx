@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Stack from '@mui/material/Stack';
@@ -52,10 +53,12 @@ export function MainToolBar({ onRestarted }: MainToolBarProps): React.JSX.Elemen
 	}, [onRestarted]);
 
 	return (
-		<Stack direction='row' spacing={2} >
-			<DarkModeSwitch />
+		<Stack direction='row' spacing={2} sx={{ alignItems: 'center' }}>
+			<Box sx={{ flexShrink: 0 }}>
+				<DarkModeSwitch />
+			</Box>
 			<Tooltip title={t('Restart Server')}>
-				<IconButton onClick={handleRestart}>
+				<IconButton onClick={handleRestart} sx={{ flexShrink: 0 }}>
 					<RestartAlt />
 				</IconButton>
 			</Tooltip>
@@ -64,6 +67,7 @@ export function MainToolBar({ onRestarted }: MainToolBarProps): React.JSX.Elemen
 					onClick={async (): Promise<void> => {
 						await handleSignOut();
 					}}
+					sx={{ flexShrink: 0 }}
 				>
 					<LogoutOutlined />
 				</IconButton>
