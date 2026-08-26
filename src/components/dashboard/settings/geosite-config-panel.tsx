@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo } from "react";
 import Stack from "@mui/material/Stack";
 import {
 	Alert,
@@ -110,10 +110,10 @@ function GeositeConfigPanelInner(): React.JSX.Element {
 			ta.value = path;
 			ta.style.position = "fixed";
 			ta.style.opacity = "0";
-			document.body.appendChild(ta);
-			ta.select();
-			document.execCommand("copy");
-			document.body.removeChild(ta);
+		document.body.append(ta);
+		ta.select();
+		document.execCommand("copy");
+		ta.remove();
 			setCopyTooltipOpen(true);
 			if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
 			copyTimerRef.current = setTimeout(() => setCopyTooltipOpen(false), 2000);
