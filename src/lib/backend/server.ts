@@ -320,6 +320,7 @@ export interface DnsServerQueryResult {
     cname: string;
     ips: string;
     ip_count: number;
+    rdata: string;
     ttl: number;
     ping_ms: number;
 }
@@ -363,6 +364,8 @@ export interface DomainResolveChain {
     final_from: string;
     final_ttl: number;
     final_ping_ms: number;
+    query_qtype: number;
+    final_data: string;
 }
 
 export interface UpStreamServers {
@@ -724,8 +727,11 @@ class SmartDNSAPI {
         return this.server.fetch<ConfigValidateResult>('/api/config/validate', 'POST', {}, {});
     }
 
-    async CheckDomainRule(domain: string): Promise<{ error?: ServerError, data?: DomainResolveChain | null }> {
-        return this.server.fetch<DomainResolveChain>(`/api/config/check-domain-rule?domain=${encodeURIComponent(domain)}`, 'GET', {}, {});
+    async CheckDomainRule(domain: string, clearCache?: boolean, queryAllServers?: boolean, qtype?: string): Promise<{ error?: ServerError, data?: DomainResolveChain | null }> {
+        const clearCacheParam = clearCache ? '&clear_cache=1' : '';
+        const queryAllParam = queryAllServers ? '&query_all_servers=1' : '';
+        const qtypeParam = qtype && qtype !== 'A' ? `&qtype=${encodeURIComponent(qtype)}` : '';
+        return this.server.fetch<DomainResolveChain>(`/api/config/check-domain-rule?domain=${encodeURIComponent(domain)}${clearCacheParam}${queryAllParam}${qtypeParam}`, 'GET', {}, {});
     }
 
     async GetGeositeList(): Promise<{ error?: ServerError, data?: GeositeFileInfo[] | null }> {

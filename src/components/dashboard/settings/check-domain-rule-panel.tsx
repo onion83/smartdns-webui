@@ -12,6 +12,7 @@ import {
 	CircularProgress,
 	// Divider,
 	IconButton,
+	Paper,
 	Table,
 	TableBody,
 	TableCell,
@@ -21,6 +22,9 @@ import {
 	TextField,
 	Tooltip,
 	Typography,
+	Checkbox,
+	FormControlLabel,
+	MenuItem,
 	alpha,
 } from "@mui/material";
 import { smartdnsServer, type DomainResolveChain, type DnsServerQueryResult } from "@/lib/backend/server";
@@ -37,6 +41,8 @@ const queryClient = new QueryClient({
 		},
 	},
 });
+
+const RECORD_TYPES = ["A", "AAAA", "CNAME", "NS", "MX", "SRV", "TXT", "SOA", "PTR", "HTTPS"] as const;
 
 const RESPONSE_MODE_NAMES: Record<string, string> = {
 	"FIRST_PING_IP": "First Ping IP",
@@ -73,7 +79,21 @@ function CopyButton({ text }: { text: string }): React.JSX.Element {
 
 	const handleCopy = React.useCallback(async () => {
 		try {
-			await navigator.clipboard.writeText(text);
+			if (navigator.clipboard && window.isSecureContext) {
+				await navigator.clipboard.writeText(text);
+			} else {
+				// Fallback for insecure contexts (plain HTTP access): the async
+				// clipboard API is unavailable there.
+				const textarea = document.createElement("textarea");
+				textarea.value = text;
+				textarea.style.position = "fixed";
+				textarea.style.opacity = "0";
+				document.body.append(textarea);
+				textarea.focus();
+				textarea.select();
+				document.execCommand("copy");
+				textarea.remove();
+			}
 			setCopied(true);
 			setTimeout(() => setCopied(false), 1500);
 		} catch {
@@ -139,6 +159,8 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 	const hasAddress = chain.action === "ADDRESS";
 	const hasNameserver = chain.action === "NAMESERVER";
 	const isCacheHit = chain.cache_result.hit === 1;
+	// A/AAAA answers are displayed as IP lists; other record types as raw data
+	const isIpType = chain.query_qtype === 1 || chain.query_qtype === 28;
 
 	return (
 		<Stack spacing={2.5}>
@@ -160,18 +182,33 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 						</Typography>
 						<FlowArrow />
 						<Chip
-							label={isPass ? t("No rule matched (passthrough)") : chain.rule_name}
+							label={isPass ? t("No rule matched") : chain.rule_name}
 							size="small"
 							color={isPass ? "default" : "primary"}
 							variant={isPass ? "outlined" : "filled"}
 						/>
-						<FlowArrow />
-						<Chip
-							label={t("Action") + ": " + chain.action}
-							size="small"
-							color={ACTION_COLORS[chain.action] ?? "default"}
-							variant="outlined"
-						/>
+						{chain.action !== "NONE" && (
+							<>
+								<FlowArrow />
+								<Chip
+									label={t("Action") + ": " + chain.action}
+									size="small"
+									color={ACTION_COLORS[chain.action] ?? "default"}
+									variant="outlined"
+								/>
+							</>
+						)}
+						{(chain.action === "NAMESERVER" || chain.action === "NONE") && chain.group_name && (
+							<>
+								<FlowArrow />
+								<Chip
+									label={t("Server Group") + ": " + chain.group_name}
+									size="small"
+									variant="outlined"
+									color="primary"
+								/>
+							</>
+						)}
 						{chain.matched_pattern && !isPass && (
 							<>
 								<FlowArrow />
@@ -198,7 +235,7 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 							<Chip
 								label={isCacheHit ? t("Cache HIT") : t("Cache MISS")}
 								size="small"
-								color={isCacheHit ? "success" : "default"}
+								color={isCacheHit ? "success" : "warning"}
 								variant={isCacheHit ? "filled" : "outlined"}
 							/>
 							{isCacheHit && (
@@ -215,11 +252,6 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 											sx={{ fontSize: "0.7rem" }}
 										/>
 									)}
-									{chain.cache_result.from_group && (
-										<Typography variant="body2" color="text.secondary" sx={{ fontFamily: "monospace" }}>
-											from group: {chain.cache_result.from_group}
-										</Typography>
-									)}
 								</>
 							)}
 						</Stack>
@@ -227,9 +259,9 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 				</Box>
 			)}
 
-			{/* Section 3: Action Details */}
+			{/* Section 3: Query Details */}
 			<Box>
-				<SectionLabel>{t("Action Details")}</SectionLabel>
+				<SectionLabel>{t("Server Group Details")}</SectionLabel>
 				<Card variant="outlined" sx={{ mt: 0.75, p: 1.5 }}>
 					{hasAddress ? (
 						<Stack spacing={0.5} direction="row" alignItems="center">
@@ -273,11 +305,11 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 			{/* Section 4: Per-Server Query Results (only if cache miss) */}
 			{(hasNameserver || !hasAddress) && !isCacheHit && chain.query_results.length > 0 && (
 				<Box>
-					<SectionLabel>{t("Per-Server Results")}</SectionLabel>
+					<SectionLabel>{t("Server Query Details")}</SectionLabel>
 					<TableContainer
-						component={Card}
+						component={Paper}
 						variant="outlined"
-						sx={{ mt: 0.75, maxHeight: 320 }}
+						sx={{ mt: 0.75, maxHeight: 320, overflow: "auto" }}
 					>
 						<Table size="small" stickyHeader>
 							<TableHead>
@@ -285,7 +317,9 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 									<TableCell sx={{ fontWeight: 600, minWidth: 200 }}>{t("Server")}</TableCell>
 									<TableCell sx={{ fontWeight: 600 }} align="center">{t("Status")}</TableCell>
 									<TableCell sx={{ fontWeight: 600, minWidth: 120 }}>{t("CNAME")}</TableCell>
-									<TableCell sx={{ fontWeight: 600, minWidth: 280 }}>{t("IP Addresses")}</TableCell>
+									<TableCell sx={{ fontWeight: 600, minWidth: 280 }}>
+										{isIpType ? t("IP Addresses") : t("Record Data")}
+									</TableCell>
 									<TableCell sx={{ fontWeight: 600 }} align="right">{t("TTL")}</TableCell>
 									<TableCell sx={{ fontWeight: 600 }} align="right">{t("Latency")}</TableCell>
 								</TableRow>
@@ -321,7 +355,22 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 												{result.cname || "—"}
 											</TableCell>
 											<TableCell>
-												<IpList ips={result.ips} />
+												{isIpType ? (
+													<IpList ips={result.ips} />
+												) : (
+													<Typography
+														sx={{
+															fontFamily: "monospace",
+															fontSize: "0.78rem",
+															maxWidth: 340,
+															overflow: "hidden",
+															textOverflow: "ellipsis",
+															whiteSpace: "nowrap",
+														}}
+													>
+														{result.rdata || "—"}
+													</Typography>
+												)}
 											</TableCell>
 											<TableCell align="right" sx={{ color: "text.secondary", fontSize: "0.78rem" }}>
 												{result.ttl > 0 ? `${result.ttl}s` : "—"}
@@ -385,12 +434,14 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 						p: 1.5,
 						backgroundColor: (theme) => {
 							const rcodeColor = RCODE_COLORS[chain.final_rcode] ?? "default";
-							const color = rcodeColor === "default" ? theme.palette.text.secondary : theme.palette[rcodeColor].main;
+							// theme.palette.text.secondary is a CSS var string in cssVariables mode,
+							// which alpha() cannot parse (MUI error #9). Use a real hex instead.
+							const color = rcodeColor === "default" ? theme.palette.grey[500] : theme.palette[rcodeColor].main;
 							return alpha(color, 0.06);
 						},
 						borderColor: (theme) => {
 							const rcodeColor = RCODE_COLORS[chain.final_rcode] ?? "default";
-							const color = rcodeColor === "default" ? theme.palette.text.secondary : theme.palette[rcodeColor].main;
+							const color = rcodeColor === "default" ? theme.palette.grey[500] : theme.palette[rcodeColor].main;
 							return alpha(color, 0.25);
 						},
 					}}
@@ -429,6 +480,19 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 								</Stack>
 							</Stack>
 						)}
+						{chain.final_data && (
+							<Stack spacing={0.5} direction="row" alignItems="center">
+								<Typography variant="body2" color="text.secondary">
+									{t("Record Data")}:
+								</Typography>
+								<Stack spacing={0.25} direction="row" flexWrap="wrap" useFlexGap gap={0.5} alignItems="center">
+									<Typography variant="body1" sx={{ fontFamily: "monospace", fontWeight: 700 }}>
+										{chain.final_data}
+									</Typography>
+									<CopyButton text={chain.final_data} />
+								</Stack>
+							</Stack>
+						)}
 						{chain.final_cname && (
 							<Stack spacing={0.5} direction="row" alignItems="center">
 								<Typography variant="body2" color="text.secondary">
@@ -440,7 +504,7 @@ function ChainResultCard({ chain }: { chain: DomainResolveChain }): React.JSX.El
 								<CopyButton text={chain.final_cname} />
 							</Stack>
 						)}
-						{!chain.final_ips && !chain.final_cname && (
+						{!chain.final_ips && !chain.final_cname && !chain.final_data && (
 							<Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
 								{t("No answer received")}
 							</Typography>
@@ -456,13 +520,29 @@ function CheckDomainRuleInner(): React.JSX.Element {
 	const { t } = useTranslation();
 	const [domain, setDomain] = React.useState("");
 	const [searchDomain, setSearchDomain] = React.useState("");
+	const [skipCache, setSkipCache] = React.useState(false);
+	const [queryAllServers, setQueryAllServers] = React.useState(false);
+	const [qtype, setQtype] = React.useState("A");
+	// Snapshot of the option checkboxes taken at the moment "Check" was clicked,
+	// so that toggling a checkbox afterwards never triggers a request by itself —
+	// the options only take effect together with the Check button.
+	const [searchSkipCache, setSearchSkipCache] = React.useState(false);
+	const [searchQueryAll, setSearchQueryAll] = React.useState(false);
+	const [searchQtype, setSearchQtype] = React.useState("A");
+	// Bumped on every "Check" click so re-checking the same domain produces a
+	// new query key and always issues a fresh request (no stale cached data).
+	const [requestSeq, setRequestSeq] = React.useState(0);
 
 	const handleSearch = React.useCallback(() => {
 		const trimmed = domain.trim();
 		if (trimmed) {
 			setSearchDomain(trimmed);
+			setSearchSkipCache(skipCache);
+			setSearchQueryAll(queryAllServers);
+			setSearchQtype(qtype);
+			setRequestSeq((seq) => seq + 1);
 		}
-	}, [domain]);
+	}, [domain, skipCache, queryAllServers, qtype]);
 
 	const handleKeyDown = React.useCallback(
 		(event: React.KeyboardEvent) => {
@@ -477,9 +557,9 @@ function CheckDomainRuleInner(): React.JSX.Element {
 		data: chainData,
 		isLoading,
 		error,
-	} = useQuery({
-		queryKey: ["check-domain-rule", searchDomain],
-		queryFn: () => smartdnsServer.CheckDomainRule(searchDomain),
+	} = 	useQuery({
+		queryKey: ["check-domain-rule", searchDomain, requestSeq, searchSkipCache, searchQueryAll, searchQtype],
+		queryFn: () => smartdnsServer.CheckDomainRule(searchDomain, searchSkipCache, searchQueryAll, searchQtype),
 		enabled: !!searchDomain,
 	});
 
@@ -491,6 +571,20 @@ function CheckDomainRuleInner(): React.JSX.Element {
 				<Stack spacing={2}>
 					{/* Search bar */}
 					<Stack spacing={1} direction="row" alignItems="center">
+						<TextField
+							select
+							size="small"
+							label={t("Record Type")}
+							value={qtype}
+							onChange={(e) => setQtype(e.target.value)}
+							sx={{ width: 150 }}
+						>
+							{RECORD_TYPES.map((rt) => (
+								<MenuItem key={rt} value={rt}>
+									{rt}
+								</MenuItem>
+							))}
+						</TextField>
 						<TextField
 							size="small"
 							placeholder={t("Enter a domain name to check which rule matches and how it resolves...")}
@@ -513,6 +607,44 @@ function CheckDomainRuleInner(): React.JSX.Element {
 						>
 							{t("Check")}
 						</Button>
+						<FormControlLabel
+							control={
+								<Checkbox
+									size="small"
+									checked={skipCache || queryAllServers}
+									disabled={queryAllServers}
+									onChange={(e) => setSkipCache(e.target.checked)}
+								/>
+							}
+							label={
+								<Tooltip title={t("Delete cached entries of the domain first, then re-query the servers")}>
+									<Typography variant="body2">{t("Clear cache")}</Typography>
+								</Tooltip>
+							}
+							sx={{ ml: 0.5 }}
+						/>
+						<FormControlLabel
+							control={
+								<Checkbox
+									size="small"
+									checked={queryAllServers}
+									onChange={(e) => {
+										setQueryAllServers(e.target.checked);
+										// Querying all servers always bypasses the cache;
+										// force-check "Skip cache" and lock it while active.
+										if (e.target.checked) {
+											setSkipCache(true);
+										}
+									}}
+								/>
+							}
+							label={
+								<Tooltip title={t("Force querying all servers in the group and clear the cached entries")}>
+									<Typography variant="body2">{t("Query all servers")}</Typography>
+								</Tooltip>
+							}
+							sx={{ ml: 0.5 }}
+						/>
 					</Stack>
 
 					{/* Loading */}

@@ -13,6 +13,7 @@ const devConfig = {
 
 const prodConfig = {
     output: 'export',
+    trailingSlash: true
 };
 
 const config = process.env.NODE_ENV === 'production' ? prodConfig : devConfig;
