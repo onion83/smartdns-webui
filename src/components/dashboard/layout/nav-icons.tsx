@@ -1,4 +1,4 @@
-import { ArticleOutlined, SettingsOutlined, DnsOutlined, type SvgIconComponent, QueryStatsOutlined, EventNoteOutlined, TerminalOutlined, DevicesOutlined } from '@mui/icons-material';
+import { ArticleOutlined, SettingsOutlined, DnsOutlined, type SvgIconComponent, QueryStatsOutlined, EventNoteOutlined, TerminalOutlined, DevicesOutlined, PublicOutlined, TroubleshootOutlined } from '@mui/icons-material';
 
 export const navIcons = {
   'QueryStats': QueryStatsOutlined,
@@ -8,4 +8,6 @@ export const navIcons = {
   'Article': ArticleOutlined,
   'Settings': SettingsOutlined,
   'Terminal': TerminalOutlined,
+  'Public': PublicOutlined,
+  'Troubleshoot': TroubleshootOutlined,
 } as Record<string, SvgIconComponent>;

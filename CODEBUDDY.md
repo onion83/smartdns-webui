@@ -76,7 +76,7 @@ Next.js App Router:
 - `/` → redirects to `/dashboard`
 - `/auth/sign-in` — login page
 - `/dashboard` — `AuthGuard` + `ClientLayout` (sidebar + top nav)
-  - Sub-pages: overview, query-log, upstream-servers, clients, settings, log, term (xterm)
+  - Sub-pages: overview, query-log, upstream-servers, clients, geosite (Geosite Maintenance), rule-checker, settings, log, term (xterm)
 
 Root layout (`src/app/layout.tsx`): `LocalizationProvider` → `UserProvider` → `ThemeProvider` → children
 
@@ -100,7 +100,7 @@ Charts: ApexCharts + Chart.js (with zoom, annotation, date-fns plugins).
 
 ### Settings Panels
 
-`src/components/dashboard/settings/` contains: `settings-tab.tsx` (tab container), `main-config-panel.tsx` (config file editor with CodeMirror), `geosite-config-panel.tsx` (geosite dat file management), `check-domain-rule-panel.tsx` (domain rule debugger), `update-password-form.tsx`, `change-lang.tsx`, `notifications.tsx`. CodeMirror language definition for SmartDNS config is in `config-languages/smartdns.ts`.
+`src/components/dashboard/settings/` contains: `settings-tab.tsx` (tabs for main config, password and language), `main-config-panel.tsx`, `update-password-form.tsx`, `change-lang.tsx`, `notifications.tsx`, plus `geosite-config-panel.tsx` and `check-domain-rule-panel.tsx`, which are standalone sidebar pages (see Routing & Layout). CodeMirror language definition for SmartDNS config is in `config-languages/smartdns.ts`.
 
 ### Path Aliases & Code Style
 

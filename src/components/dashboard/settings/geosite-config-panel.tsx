@@ -215,8 +215,8 @@ function GeositeConfigPanelInner(): React.JSX.Element {
 	}, [rawServerContent]);
 
 	return (
-		<Card sx={{ display: "flex", flexDirection: "column", height: "calc(100vh - 260px)" }}>
-			<CardContent sx={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+		<Card sx={{ display: "flex", flexDirection: "column", height: "calc(100vh - 120px)" }}>
+			<CardContent sx={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", pb: "12px" }}>
 				<Stack spacing={2} sx={{ mb: 2, flexShrink: 0 }}>
 					<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
 						{t("Geosite Data Files")}

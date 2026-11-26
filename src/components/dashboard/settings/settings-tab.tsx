@@ -6,25 +6,15 @@ import Stack from "@mui/material/Stack";
 import { UpdatePasswordForm } from "@/components/dashboard/settings/update-password-form";
 import { ChangeLang } from "@/components/dashboard/settings/change-lang";
 import { MainConfigPanel } from "@/components/dashboard/settings/main-config-panel";
-import { GeositeConfigPanel } from "@/components/dashboard/settings/geosite-config-panel";
-import { CheckDomainRulePanel } from "@/components/dashboard/settings/check-domain-rule-panel";
 import { TabContext, TabList, TabPanel } from "@mui/lab";
 import { Box, Card, CardContent, Tab } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { DescriptionOutlined, PublicOutlined, TroubleshootOutlined, LockResetOutlined, LanguageOutlined } from "@mui/icons-material";
+import { DescriptionOutlined, LockResetOutlined, LanguageOutlined } from "@mui/icons-material";
 
 const tabs = [
 	{
 		label: "Main Config",
 		icon: <DescriptionOutlined fontSize="small" sx={{ mr: 0.5 }} />,
-	},
-	{
-		label: "Geosite Config",
-		icon: <PublicOutlined fontSize="small" sx={{ mr: 0.5 }} />,
-	},
-	{
-		label: "Rule Checker",
-		icon: <TroubleshootOutlined fontSize="small" sx={{ mr: 0.5 }} />,
 	},
 	{
 		label: "Password",
@@ -68,10 +58,8 @@ export default function SettingsTab(): React.JSX.Element {
 							</TabList>
 						</Box>
 						<TabPanel value="0" sx={{ width: "100%", px: 0 }}><MainConfigPanel /></TabPanel>
-						<TabPanel value="1" sx={{ width: "100%", px: 0 }}><GeositeConfigPanel /></TabPanel>
-						<TabPanel value="2" sx={{ width: "100%", px: 0 }}><CheckDomainRulePanel /></TabPanel>
-						<TabPanel value="3" sx={{ width: "100%", px: 0 }}><UpdatePasswordForm /></TabPanel>
-						<TabPanel value="4" sx={{ width: "100%", px: 0 }}><ChangeLang /></TabPanel>
+						<TabPanel value="1" sx={{ width: "100%", px: 0 }}><UpdatePasswordForm /></TabPanel>
+						<TabPanel value="2" sx={{ width: "100%", px: 0 }}><ChangeLang /></TabPanel>
 					</CardContent>
 				</TabContext>
 			</Card>

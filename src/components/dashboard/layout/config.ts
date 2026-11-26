@@ -8,5 +8,7 @@ export const navItems = [
   { key: 'devices', title: 'Clients', href: paths.dashboard.clients, icon: 'Devices' },
   { key: 'log', title: 'Log', href: paths.dashboard.log, icon: 'Article' },
   { key: 'term', title: 'Terminal', href: paths.dashboard.term, icon: 'Terminal' },
+  { key: 'geosite', title: 'Geosite Maintenance', href: paths.dashboard.geosite, icon: 'Public' },
+  { key: 'rule-checker', title: 'Rule Checker', href: paths.dashboard.ruleChecker, icon: 'Troubleshoot' },
   { key: 'settings', title: 'Settings', href: paths.dashboard.settings, icon: 'Settings' },
 ] satisfies NavItemConfig[];

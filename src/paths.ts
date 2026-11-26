@@ -7,6 +7,8 @@ export const paths = {
     upstreamServers: '/dashboard/upstream-servers',
     clients: '/dashboard/clients',
     settings: '/dashboard/settings',
+    geosite: '/dashboard/geosite',
+    ruleChecker: '/dashboard/rule-checker',
     log: '/dashboard/log',
     term: '/dashboard/term',
   },

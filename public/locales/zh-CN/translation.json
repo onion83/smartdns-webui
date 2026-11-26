@@ -155,7 +155,7 @@
     "You have unsaved changes. Discard and switch file?": "有未保存的更改，是否放弃并切换文件？",
     "Failed to save configuration": "保存配置失败",
     "Configuration validation failed": "配置校验失败",
-    "Geosite Config": "Geosite 配置",
+    "Geosite Maintenance": "Geosite 维护",
     "Geosite Data Files": "Geosite 数据文件",
     "Select file...": "请选择文件...",
     "Local": "本地",
