@@ -18,16 +18,8 @@ export interface LogoProps {
   width?: number;
 }
 
-export function Logo({ color = 'dark', emblem, height = HEIGHT, width = WIDTH }: LogoProps): React.JSX.Element {
-  let url: string;
-
-  if (emblem) {
-    url = color === 'light' ? '/assets/logo.svg' : '/assets/logo.svg';
-  } else {
-    url = color === 'light' ? '/assets/logo.svg' : '/assets/logo.svg';
-  }
-
-  return <Box alt="logo" component="img" height={height} src={url} width={width} />;
+export function Logo({ height = HEIGHT, width = WIDTH }: LogoProps): React.JSX.Element {
+  return <Box alt="logo" component="img" height={height} src="/assets/smartdns-pro-max-logo-small.png" width={width} />;
 }
 
 export interface FlagProps {
